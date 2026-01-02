@@ -26,7 +26,7 @@ import pyttsx3
 
 # --- CONFIGURATION ---
 # !!! PASTE YOUR API KEY HERE !!!
-GEMINI_API_KEY = 'AIzaSyAqUFfYGsHO7RSWpG7L802GLxV7BVi8-wg' 
+GEMINI_API_KEY = '# !!! PASTE YOUR API KEY HERE !!!' 
 
 CONFIG_PATH = Path('config.json')
 NOTES_PATH = Path('notes.txt')
@@ -543,4 +543,5 @@ class IslandController:
         webview.start(debug=False, storage_path=str(safe_storage))
 
 if __name__ == '__main__':
+
     IslandController().start()
