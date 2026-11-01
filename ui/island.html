@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lumi Island</title>
+    <link rel="stylesheet" href="island.css">
+</head>
+<body>
+    <!-- Icons are bundled so they work offline -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol>
+        <symbol id="i-memory" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></symbol>
+        <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2.5 5 13.5h6l-1 8 8-11h-6l1-8z"/></symbol>
+        <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></symbol>
+        <symbol id="i-note" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></symbol>
+        <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6.5 3h11M6.5 21h11M7.5 3c0 4.5 4.5 6 4.5 9s-4.5 4.5-4.5 9M16.5 3c0 4.5-4.5 6-4.5 9s4.5 4.5 4.5 9"/></symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/></symbol>
+        <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></symbol>
+        <symbol id="i-prev" viewBox="0 0 24 24"><path d="M18 6v12l-9-6 9-6zM6 6v12"/></symbol>
+        <symbol id="i-next" viewBox="0 0 24 24"><path d="M6 6v12l9-6-9-6zM18 6v12"/></symbol>
+        <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5-12-7.5z"/></symbol>
+        <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+        <symbol id="i-playpause" viewBox="0 0 24 24"><path d="M5 6v12l7-6-7-6zM15 6v12M19 6v12"/></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></symbol>
+        <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></symbol>
+        <symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 10v4M9.5 7v10M14 4v16M18.5 8v8"/></symbol>
+        <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+        <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></symbol>
+        <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A9.8 9.8 0 0 1 12 6c5.5 0 9 6 9 6a16 16 0 0 1-2.7 3.4M6.6 7.5C4.1 9.2 3 12 3 12s3.5 6 9 6a9 9 0 0 0 4.3-1.1M9.9 10a3 3 0 0 0 4.1 4.1"/></symbol>
+        <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8M7 6.3a7.5 7.5 0 1 0 10 0"/></symbol>
+        <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></symbol>
+        <symbol id="i-spin" viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 1-8 8"/></symbol>
+        <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></symbol>
+    </svg>
+
+    <div id="lumi-container" class="mood-idle">
+        <div id="lumi-body" aria-hidden="true">
+            <!-- Lumi's face: each expression shows a different set of these parts (see "LUMI'S FACE" in island.css) -->
+            <svg id="lumi-face" viewBox="0 0 60 50">
+                <g id="lumi-eyes">
+                    <g class="eye-g" id="eye-l">
+                        <rect class="eye-open" x="17" y="15" width="8" height="12" rx="4"/>
+                        <circle class="eye-glint" cx="22.6" cy="17.6" r="1.4"/>
+                        <path class="eye-happy" d="M16.5 23 Q21 16.5 25.5 23"/>
+                        <path class="eye-closed" d="M16.5 21.5 Q21 25 25.5 21.5"/>
+                    </g>
+                    <g class="eye-g" id="eye-r">
+                        <rect class="eye-open" x="35" y="15" width="8" height="12" rx="4"/>
+                        <circle class="eye-glint" cx="40.6" cy="17.6" r="1.4"/>
+                        <path class="eye-happy" d="M34.5 23 Q39 16.5 43.5 23"/>
+                        <path class="eye-closed" d="M34.5 21.5 Q39 25 43.5 21.5"/>
+                    </g>
+                </g>
+                <ellipse id="lumi-mouth" cx="30" cy="34" rx="3.2" ry="2.4"/>
+                <g id="lumi-cheeks"><ellipse cx="13" cy="30" rx="3.2" ry="1.9"/><ellipse cx="47" cy="30" rx="3.2" ry="1.9"/></g>
+                <g id="lumi-mark"><path d="M54 -4v6.5"/><circle cx="54" cy="7" r="1.1"/></g>
+            </svg>
+            <div id="lumi-zzz"><span>z</span><span>z</span></div>
+            <div id="lumi-thought"><i></i><i></i><i></i></div>
+        </div>
+        <div id="lumi-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <button id="mic-btn" type="button" aria-label="Talk to Lumi" title="Talk to Lumi"><svg class="icon"><use href="#i-mic"/></svg></button>
+    </div>
+
+    <div id="speech-bubble" role="status" aria-live="polite"></div>
+
+    <!-- A small card under Lumi for the tour and for questions like "Take a break?" -->
+    <div id="card" role="dialog" aria-label="Lumi">
+        <div id="card-text"></div>
+        <div class="card-foot">
+            <span class="card-step" id="card-step"></span>
+            <button class="btn-text" type="button" id="card-secondary">Skip</button>
+            <button class="btn-primary" type="button" id="card-primary">Next</button>
+        </div>
+    </div>
+
+    <div id="island" class="idle pywebview-drag-region" role="button" tabindex="0" aria-label="Lumi Island. Press Enter to open the dashboard">
+        <!-- Compact live activities -->
+        <div class="content compact" id="status-ui"><svg class="icon" aria-hidden="true"><use id="status-icon" href="#i-mic"/></svg><span id="status-text" class="ellipsis" aria-hidden="true">Listening</span><button type="button" class="status-stop" id="status-stop" aria-label="Stop" title="Stop (Esc)"><svg class="icon"><use href="#i-stop"/></svg></button></div>
+        <div class="content compact" id="toast-ui" aria-hidden="true"><svg class="icon" style="color:var(--green)"><use href="#i-check"/></svg><span id="toast-text" class="ellipsis"></span></div>
+        <div class="content compact" id="volume-ui" aria-hidden="true"><svg class="icon"><use id="volume-icon" href="#i-volume"/></svg><div class="bar"><i id="volume-bar"></i></div><span class="val" id="volume-val">0</span></div>
+        <div class="content compact" id="focus-ui" aria-hidden="true"><svg class="icon"><use href="#i-hourglass"/></svg><span class="label" id="focus-label">Focus</span><span id="focus-timer">25:00</span><div id="focus-progress"><i id="focus-progress-bar"></i></div></div>
+        <div class="content compact" id="media-ui" aria-hidden="true"><div class="art" id="media-art"><svg class="icon"><use href="#i-music"/></svg></div><span class="title ellipsis" id="media-title"></span><div class="eq" id="media-eq"><i></i><i></i><i></i><i></i></div></div>
+
+        <!-- Expanded panels -->
+        <div class="content" id="dashboard-ui">
+            <div class="stats-container">
+                <div class="tile">
+                    <div class="ring" id="ram-ring" style="--color:var(--blue); --pct:0%"><svg class="icon"><use href="#i-memory"/></svg></div>
+                    <div class="stat-text"><span class="stat-val" id="ram-val">0%</span><span class="stat-label" id="ram-label">Memory</span></div>
+                </div>
+                <div class="tile">
+                    <div class="ring" id="bat-ring" style="--color:var(--green); --pct:0%"><svg class="icon"><use href="#i-bolt"/></svg></div>
+                    <div class="stat-text"><span class="stat-val" id="bat-val">100%</span><span class="stat-label" id="bat-label">Battery</span></div>
+                </div>
+                <div class="tile">
+                    <svg class="icon net-icon" id="net-icon"><use href="#i-wifi"/></svg>
+                    <div class="stat-text"><span class="stat-val small" id="net-val">Checking</span><span class="stat-label">Network</span></div>
+                </div>
+                <button class="tile" type="button" id="btn-notes" aria-label="Open quick note"><svg class="icon"><use href="#i-note"/></svg><span>Note</span></button>
+                <button class="tile" type="button" id="btn-focus" aria-label="Focus sessions"><svg class="icon"><use href="#i-hourglass"/></svg><span id="btn-focus-label">Focus</span></button>
+            </div>
+        </div>
+        <div class="content" id="notes-ui">
+            <div class="notes-header"><span>Quick note</span><span class="save-indicator" id="save-msg">Saved</span></div>
+            <textarea id="notes-area" placeholder="Type something…" aria-label="Quick note"></textarea>
+        </div>
+        <div class="content" id="music-ui">
+            <div class="music-top">
+                <div class="album-art" id="album-art"><svg class="icon"><use href="#i-music"/></svg></div>
+                <div class="track-info"><span class="track-title ellipsis" id="track-title">Nothing playing</span><span class="track-sub ellipsis" id="track-sub">Play something in any app</span></div>
+            </div>
+            <div class="controls">
+                <button class="btn-media" type="button" data-media="prev" aria-label="Previous track"><svg class="icon"><use href="#i-prev"/></svg></button>
+                <button class="btn-media primary" type="button" data-media="play" id="btn-play" aria-label="Play"><svg class="icon solid"><use id="play-icon" href="#i-play"/></svg></button>
+                <button class="btn-media" type="button" data-media="next" aria-label="Next track"><svg class="icon"><use href="#i-next"/></svg></button>
+            </div>
+        </div>
+        <div class="content" id="focuspanel-ui">
+            <div class="fp-head"><svg class="icon"><use href="#i-hourglass"/></svg><span class="fp-title" id="fp-title">Focus</span><span class="fp-today" id="fp-today">Today: 0 min</span></div>
+            <div class="fp-setup" id="fp-setup">
+                <div class="fp-chips" role="radiogroup" aria-label="Focus length" id="fp-chips"></div>
+                <div class="fp-actions">
+                    <button class="fp-secondary" type="button" id="fp-break">5 min break</button>
+                    <button class="fp-primary" type="button" id="fp-start">Start 25 min</button>
+                </div>
+            </div>
+            <div class="fp-running" id="fp-running">
+                <span class="fp-time" id="fp-time">25:00</span>
+                <button class="fp-secondary" type="button" id="fp-stop">Stop</button>
+            </div>
+        </div>
+        <div class="content" id="chat-ui">
+            <div class="chat-head"><span class="cmd-lumi" aria-hidden="true"></span><b>Lumi</b><button class="chat-close" type="button" id="chat-close" aria-label="Close chat" title="Close (Esc)"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+            <div class="chat-log" id="chat-log" role="log" aria-live="polite"></div>
+            <form class="chat-form" id="chat-form">
+                <input id="chat-input" type="text" placeholder="Ask Lumi, or ask Lumi to do something…" aria-label="Message to Lumi" autocomplete="off" spellcheck="true">
+                <button type="submit" class="chat-send" aria-label="Send"><svg class="icon"><use href="#i-send"/></svg></button>
+            </form>
+        </div>
+        <div class="content" id="menu-ui">
+            <button class="menu-item" type="button" id="menu-settings"><svg class="icon"><use href="#i-settings"/></svg>Settings</button>
+            <button class="menu-item" type="button" id="menu-hide"><svg class="icon"><use href="#i-eyeoff"/></svg>Hide 1 hour</button>
+            <button class="menu-item" type="button" id="menu-quit"><svg class="icon"><use href="#i-power"/></svg>Quit</button>
+        </div>
+        <div class="content" id="command-ui">
+            <div class="cmd-row"><div class="cmd-lumi" aria-hidden="true"></div><input id="cmd-input" type="text" placeholder="Search apps, start focus, or add a note…" aria-label="Search apps or type a command" autocomplete="off" spellcheck="false" role="combobox" aria-controls="cmd-results" aria-expanded="false" aria-autocomplete="list"></div>
+            <div class="cmd-pins" id="cmd-pins" role="listbox" aria-label="Pinned apps"></div>
+            <ul id="cmd-results" role="listbox" aria-label="Results"></ul>
+            <div class="cmd-footer"><span><kbd>↑↓</kbd> move</span><span><kbd>Enter</kbd> run</span><span><kbd>Esc</kbd> close</span></div>
+        </div>
+    </div>
+
+    <script src="lumi-state.js"></script>
+    <script src="island.js"></script>
+</body>
+</html>

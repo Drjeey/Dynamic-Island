@@ -1,0 +1,13 @@
+pywebview
+google-genai
+anthropic
+openai
+SpeechRecognition
+sounddevice
+pyttsx3
+pycaw
+pywin32
+keyring
+winrt-Windows.Media.Control
+winrt-Windows.Storage.Streams
+winrt-Windows.Foundation

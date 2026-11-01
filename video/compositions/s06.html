@@ -1,0 +1,162 @@
+<template>
+  <style>
+
+#root { position: absolute; inset: 0; overflow: hidden; font-family: Inter, sans-serif; color: #F2F2F5; }
+.wall { position: absolute; inset: 0; background: radial-gradient(1000px 640px at 50% 0%, #3E5F56 0%, #2F4A43 62%, #2A433D 100%); }
+.cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+.isl { position: absolute; left: 660px; top: 10px; width: 600px; height: 300px; background: #0B0B0D; z-index: 10; }
+.ly { position: absolute; top: 0; opacity: 0; box-sizing: border-box; }
+.cp { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 34px; font-size: 13px; font-weight: 600; }
+svg.icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.t2 { color: #A3A3AD; }
+.ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tile { background: #18181C; border-radius: 16px; }
+.lumi { position: absolute; left: 930px; top: 0; width: 60px; height: 50px; z-index: 5; }
+.bd { position: relative; width: 100%; height: 100%; background: #FFD9C4; border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%; box-shadow: inset -2px -5px 10px rgba(0,0,0,0.1); }
+.fc { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.eo { fill: #1C1C1E; } .gl { fill: #FFFFFF; opacity: 0.85; }
+.eh, .ec { fill: none; stroke: #1C1C1E; stroke-width: 2.4; stroke-linecap: round; opacity: 0; }
+.mo { fill: #1C1C1E; opacity: 0; }
+.ch ellipse { fill: #FF8FA3; opacity: 0; }
+.mk { opacity: 0; fill: #F5B83D; stroke: #F5B83D; stroke-width: 2.4; stroke-linecap: round; }
+.th { position: absolute; right: -14px; top: -10px; width: 18px; height: 18px; opacity: 0; }
+.th i { position: absolute; left: 2px; bottom: 2px; width: 4px; height: 4px; border-radius: 50%; background: #C9CDD3; }
+.spk { position: absolute; left: 27px; top: 22px; width: 6px; height: 6px; border-radius: 50%; background: #F5B83D; opacity: 0; }
+.spk.v { background: #B98CFF; width: 4px; height: 4px; }
+.cur { position: absolute; left: 0; top: 0; width: 64px; height: 64px; z-index: 60; }
+.cur svg { width: 46px; height: 64px; overflow: visible; }
+.card { position: absolute; left: 810px; width: 300px; background: #18181C; border-radius: 16px; padding: 12px 14px; font-size: 13px; line-height: 1.45; z-index: 6; opacity: 0; }
+.btns { display: flex; gap: 8px; margin-top: 10px; }
+.btn { font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 8px; background: #242429; color: #F2F2F5; }
+.btn.pri { background: #2E6BE0; color: #FFFFFF; }
+.eq { display: flex; align-items: flex-end; gap: 2px; height: 14px; flex: none; }
+.eq i { width: 3px; height: 14px; border-radius: 1px; background: #B98CFF; transform-origin: 50% 100%; }
+
+.msg{max-width:84%;padding:7px 11px;border-radius:14px;font-size:13px;line-height:1.45;opacity:0}.mu{align-self:flex-end;background:#1E3A66;border-bottom-right-radius:4px}.ml{align-self:flex-start;background:#18181C;border-bottom-left-radius:4px}.rc{align-self:flex-start;font-size:12px;color:#A3A3AD;padding:0 6px;opacity:0;display:flex;align-items:center;gap:5px}.wk{align-self:flex-start;font-size:13px;color:#A3A3AD;padding:7px 11px;background:#18181C;border-radius:14px;opacity:0}
+  </style>
+  <div data-hf-id="hf-utsa" id="root" data-composition-id="s06" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-a9vw" class="wall"></div>
+<div data-hf-id="hf-c8r1" class="cam" id="s06-cam" data-layout-allow-overflow><div data-hf-id="hf-0kb4" class="isl" id="s06-isl"><div data-hf-id="hf-0pxc" class="ly" id="s06-chat" style="left:70.0px;width:460px;height:250px;position:absolute"><div data-hf-id="hf-94s0" style="display:flex;flex-direction:column;height:250px;padding:10px 12px;box-sizing:border-box">
+<div data-hf-id="hf-6795" style="display:flex;align-items:center;gap:8px;height:26px"><span data-hf-id="hf-07r0" style="width:20px;height:16px;flex:none;background:#FFD9C4;border-radius:55% 45% 42% 58% / 58% 48% 52% 42%"></span><b data-hf-id="hf-wpya" style="font-size:13px">Lumi</b><span data-hf-id="hf-ti5u" style="margin-left:auto" class="t2"><svg data-hf-id="hf-fviw" class="icon" style="width:14px;height:14px"><use data-hf-id="hf-ll8a" href="#i-close"/></svg></span></div>
+<div data-hf-id="hf-eka6" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:6px 4px;overflow:hidden;min-height:0"><div data-hf-id="hf-ooun" class="msg mu" id="s06-u1">Start a 25-min focus and add “call Sam” to my note</div><div data-hf-id="hf-8v5a" class="wk" id="s06-wk">Thinking…</div><div data-hf-id="hf-hxi7" class="rc" id="s06-rc1"><svg data-hf-id="hf-ljsr" viewBox="0 0 24 24" style="width:12px;height:12px"><path data-hf-id="hf-1mb6" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#34C77B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Focus started for 25 minutes</div><div data-hf-id="hf-5id4" class="rc" id="s06-rc2"><svg data-hf-id="hf-ozej" viewBox="0 0 24 24" style="width:12px;height:12px"><path data-hf-id="hf-xkhi" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#34C77B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Added to your note</div><div data-hf-id="hf-x8ma" class="msg ml" id="s06-reply"></div></div>
+<div data-hf-id="hf-2sq8" style="display:flex;align-items:center;gap:8px;height:36px;background:#18181C;border-radius:18px;padding:0 4px 0 14px">
+<span data-hf-id="hf-q04b" id="s06-in" style="flex:1;font-size:13px"></span><span data-hf-id="hf-55gs" id="s06-inph" class="t2" style="flex:1;font-size:13px;position:absolute;left:26px">Ask Lumi, or ask Lumi to do something…</span>
+<span data-hf-id="hf-skob" id="s06-send" style="width:28px;height:28px;border-radius:14px;background:#4C8DFF;color:#fff;display:flex;align-items:center;justify-content:center;position:relative"><svg data-hf-id="hf-ab5o" class="icon" style="width:16px;height:16px;stroke-width:2.2"><use data-hf-id="hf-kkf4" href="#i-send"/></svg><span data-hf-id="hf-d1rc" id="s06-stopic" style="position:absolute;inset:0;border-radius:14px;background:#2A2A30;display:flex;align-items:center;justify-content:center;opacity:0"><svg data-hf-id="hf-zzh7" viewBox="0 0 24 24" style="width:13px;height:13px"><rect data-hf-id="hf-2i17" x="7" y="7" width="10" height="10" rx="2" fill="#F2F2F5"/></svg></span></span></div></div></div></div><div data-hf-id="hf-0z94" class="lumi" id="s06-lumi"><div data-hf-id="hf-sd36" class="bd"><svg data-hf-id="hf-fw34" class="fc" viewBox="0 0 60 50"><g data-hf-id="hf-elfg" class="eyes"><g data-hf-id="hf-xzyu" class="eg"><rect data-hf-id="hf-k185" class="eo" x="17" y="15" width="8" height="12" rx="4"/><circle data-hf-id="hf-7c2h" class="gl" cx="22.6" cy="17.6" r="1.4"/><path data-hf-id="hf-hbj3" class="eh" d="M16.5 23 Q21 16.5 25.5 23"/><path data-hf-id="hf-4v07" class="ec" d="M16.5 21.5 Q21 25 25.5 21.5"/></g><g data-hf-id="hf-hcfu" class="eg"><rect data-hf-id="hf-ed6h" class="eo" x="35" y="15" width="8" height="12" rx="4"/><circle data-hf-id="hf-pis1" class="gl" cx="40.6" cy="17.6" r="1.4"/><path data-hf-id="hf-k4mi" class="eh" d="M34.5 23 Q39 16.5 43.5 23"/><path data-hf-id="hf-l9n6" class="ec" d="M34.5 21.5 Q39 25 43.5 21.5"/></g></g><ellipse data-hf-id="hf-rdcw" class="mo" cx="30" cy="34" rx="3.2" ry="2.4"/><g data-hf-id="hf-kzen" class="ch"><ellipse data-hf-id="hf-zwgq" cx="13" cy="30" rx="3.2" ry="1.9"/><ellipse data-hf-id="hf-471h" cx="47" cy="30" rx="3.2" ry="1.9"/></g><g data-hf-id="hf-80xu" class="mk"><path data-hf-id="hf-1ugw" d="M54 -4v6.5"/><circle data-hf-id="hf-mahc" cx="54" cy="7" r="1.1"/></g></svg><div data-hf-id="hf-en3o" class="th"><i data-hf-id="hf-wt6k"></i><i data-hf-id="hf-zeb8"></i><i data-hf-id="hf-y7e5"></i></div></div><i data-hf-id="hf-sx44" class="spk"></i><i data-hf-id="hf-t5u2" class="spk v"></i><i data-hf-id="hf-vj30" class="spk"></i><i data-hf-id="hf-a6q6" class="spk v"></i><i data-hf-id="hf-uc5x" class="spk"></i><i data-hf-id="hf-al17" class="spk v"></i></div></div><div data-hf-id="hf-nuqw" class="cur" id="s06-cur"><svg data-hf-id="hf-6ly9" viewBox="0 0 46 64"><path data-hf-id="hf-w8jm" d="M4 3 L4 52 L16 40 L25 59 L33 55 L24 37 L41 37 Z" fill="#FFFFFF" stroke="#0B0B0D" stroke-width="3" stroke-linejoin="round"/></svg></div>
+  </div>
+  <script>
+    (() => {
+      const P = 's06';
+      const tl = gsap.timeline({ paused: true });
+
+const Z = 2.6, OY = 18, W = 600, H = 300;
+const $ = s => document.querySelector(s);
+const L = '#s06-lumi';
+const pt = (x, y, z = Z, ox = 0) => ({ x: 960 + (x - 960) * z + ox, y: OY + y * z });
+const inset = (w, h, r) => 'inset(0px ' + ((W - w) / 2) + 'px ' + (H - h) + 'px round ' + (r) + 'px)';  // the 3-value form the browser itself uses, so tweens pair the same numbers
+function shapeSet(t, w, h, r) { tl.set('#s06-isl', { clipPath: inset(w, h, r) }, t); }
+function shape(t, w, h, r, grow = true) {
+  tl.to('#s06-isl', { clipPath: inset(w, h, r), duration: grow ? 0.42 : 0.28, ease: grow ? 'back.out(1.4)' : 'power3.in' }, t);
+}
+function show(t, sel, d = 0.2) { tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: d, ease: 'power2.out', immediateRender: false }, t); }
+function hide(t, sel, d = 0.14) { tl.to(sel, { opacity: 0, duration: d, ease: 'power2.in' }, t); }
+function lumiY(t, y, d = 0.5) { tl.to(L, { y, duration: d, ease: 'back.out(1.6)' }, t); }
+function eyes(t, k) {
+  tl.set('#s06-lumi .eo, #s06-lumi .gl', { opacity: k === 'open' ? 1 : 0 }, t);
+  tl.set('#s06-lumi .eh', { opacity: k === 'happy' ? 1 : 0 }, t);
+  tl.set('#s06-lumi .ec', { opacity: k === 'closed' ? 1 : 0 }, t);
+}
+function color(t, c, d = 0.3) { tl.to('#s06-lumi .bd', { backgroundColor: c, duration: d }, t); }
+function cheeks(t, o) { tl.to('#s06-lumi .ch ellipse', { opacity: o, duration: 0.25 }, t); }
+function mouth(t, o, sx = 1, sy = 1) { tl.to('#s06-lumi .mo', { opacity: o, scaleX: sx, scaleY: sy, duration: 0.15 }, t); }
+function eyeT(t, v, d = 0.15) { tl.to('#s06-lumi .eg', Object.assign({ duration: d }, v), t); }
+function look(t, x, y, d = 0.2) { tl.to('#s06-lumi .eyes', { x, y, duration: d, ease: 'power2.out' }, t); }
+function blink(t) { tl.to('#s06-lumi .eg', { scaleY: 0.1, duration: 0.07 }, t); tl.to('#s06-lumi .eg', { scaleY: 1, duration: 0.09 }, t + 0.08); }
+function hop(t, h = 10) { tl.to('#s06-lumi .bd', { y: -h, duration: 0.18, ease: 'power2.out' }, t); tl.to('#s06-lumi .bd', { y: 0, duration: 0.32, ease: 'bounce.out' }, t + 0.18); }
+function talk(t, d, rate = 0.15) {
+  const n = Math.max(1, Math.round(d / (rate / 2)) - 1);
+  tl.set('#s06-lumi .mo', { opacity: 1 }, t);
+  tl.fromTo('#s06-lumi .mo', { scaleX: 0.55, scaleY: 0.35 }, { scaleX: 1, scaleY: 1, duration: rate / 2, repeat: n, yoyo: true, ease: 'sine.inOut', immediateRender: false }, t);
+  tl.to('#s06-lumi .mo', { opacity: 0, scaleX: 1, scaleY: 1, duration: 0.1 }, t + d);
+}
+function dance(t, d, beat = 0.6) {
+  const n = Math.max(1, Math.round(d / (beat / 2)) - 1);
+  tl.fromTo('#s06-lumi .bd', { rotation: -4, y: 0 }, { rotation: 4, y: -3, duration: beat / 2, repeat: n, yoyo: true, ease: 'sine.inOut', transformOrigin: '50% 100%', immediateRender: false }, t);
+  tl.to('#s06-lumi .bd', { rotation: 0, y: 0, duration: 0.2 }, t + d);
+}
+function breathe(t, d) {
+  const n = Math.max(1, Math.floor(d / 2.5) * 2 - 1);
+  tl.fromTo('#s06-lumi', { scaleY: 1, scaleX: 1 }, { scaleY: 0.975, scaleX: 1.02, duration: 1.25, repeat: n, yoyo: true, ease: 'sine.inOut', transformOrigin: '50% 100%', immediateRender: false }, t);
+}
+function thoughts(t, d) {
+  tl.to('#s06-lumi .th', { opacity: 1, duration: 0.15 }, t);
+  document.querySelectorAll('#s06-lumi .th i').forEach((dot, i) => {
+    const n = Math.max(1, Math.floor((d - i * 0.4) / 1.2));
+    tl.fromTo(dot, { opacity: 0, x: 0, y: 4, scale: 0.6 }, { keyframes: [{ opacity: 1, y: 0, scale: 0.8, duration: 0.35 }, { opacity: 0, x: 5, y: -11, scale: 1, duration: 0.85 }], repeat: n - 1, immediateRender: false }, t + i * 0.4);
+  });
+  tl.to('#s06-lumi .th', { opacity: 0, duration: 0.15 }, t + d);
+}
+function sparkle(t) {
+  const out = [[-38, -22], [36, -26], [-44, 8], [46, 4], [-22, -38], [20, -40]];
+  document.querySelectorAll('#s06-lumi .spk').forEach((s, i) => {
+    tl.fromTo(s, { opacity: 0, x: 0, y: 0, scale: 0.4 }, { keyframes: [{ opacity: 1, x: out[i][0] * 0.3, y: out[i][1] * 0.3, scale: 0.7, duration: 0.2 }, { opacity: 0, x: out[i][0], y: out[i][1], scale: 1, duration: 0.7 }], immediateRender: false }, t);
+  });
+}
+{ const g = document.querySelectorAll('#s06-lumi .eg'); tl.set(g[0], { svgOrigin: '21 21' }, 0); tl.set(g[1], { svgOrigin: '39 21' }, 0); tl.set('#s06-lumi .mo', { svgOrigin: '30 34' }, 0); }
+// layout position of an element's centre in the 1920x1080 frame (offsets ignore transforms and preview scaling)
+function pos(sel) {
+  const el = $(sel); let x = el.offsetWidth / 2, y = el.offsetHeight / 2, n = el;
+  while (n && n.id !== 'root' && !n.hasAttribute('data-composition-id')) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+  return { x, y };
+}
+function cur(t, x, y, d = 0.5, ease = 'power2.inOut') { tl.to('#s06-cur', { x, y, duration: d, ease }, t); }
+function curPt(t, sx, sy, d = 0.5, z = Z, ox = 0) { const p = pt(sx, sy, z, ox); cur(t, p.x, p.y, d); }
+function click(t) { tl.to('#s06-cur svg', { scale: 0.86, duration: 0.06, transformOrigin: '4px 4px' }, t); tl.to('#s06-cur svg', { scale: 1, duration: 0.1 }, t + 0.08); }
+function type(t, sel, text, cps = 22) { const el = $(sel); for (let i = 0; i <= text.length; i++) tl.set(el, { textContent: text.slice(0, i) }, t + i / cps); }
+function setText(t, sel, text) { tl.set($(sel), { textContent: text }, t); }
+function eq(t, d, sel) {
+  document.querySelectorAll((sel) + ' .eq i').forEach((b, i) => {
+    const per = [0.42, 0.36, 0.48, 0.4][i];
+    const n = Math.max(1, Math.round(d / per) - 1);
+    tl.fromTo(b, { scaleY: 0.3 }, { scaleY: 1, duration: per, repeat: n, yoyo: true, ease: 'sine.inOut', immediateRender: false }, t + i * 0.07);
+  });
+}
+
+      tl.set({}, {}, 11.0);
+
+tl.set('#s06-cam', { scale: Z, y: OY, transformOrigin: '960px 0px' }, 0);
+shapeSet(0, 120, 34, 17);
+tl.set(L, { y: 60 }, 0);
+tl.set('#s06-cur', { x: 2100, y: 1200 }, 0);
+
+breathe(0, 11);
+curPt(0.0, 990, 85, 0.35);
+click(0.3);
+shape(0.35, 460, 250, 24);
+lumiY(0.35, 276);
+show(0.5, '#s06-chat');
+cur(0.7, 2100, 1000, 0.5);
+hide(0.9, '#s06-inph', 0.05);
+type(0.9, '#s06-in', 'Start a 25-min focus and add “call Sam” to my note', 34);
+setText(2.45, '#s06-in', '');
+show(2.45, '#s06-inph', 0.1);
+show(2.45, '#s06-u1', 0.15);
+show(2.45, '#s06-stopic', 0.1);
+show(2.6, '#s06-wk', 0.15);
+thoughts(2.6, 0.9);
+look(2.6, -2, -3); look(3.4, 0, 0);
+setText(3.15, '#s06-wk', 'Starting focus…');
+tl.fromTo('#s06-lumi .bd', { y: 0 }, { y: -2, duration: 0.35, repeat: 1, yoyo: true, ease: 'sine.inOut', immediateRender: false }, 3.15);
+show(3.75, '#s06-rc1', 0.15); hop(3.75, 7); eyes(3.8, 'happy'); eyes(4.4, 'open');
+setText(4.05, '#s06-wk', 'Adding to note…');
+show(4.65, '#s06-rc2', 0.15); hop(4.65, 7); eyes(4.7, 'happy'); eyes(5.2, 'open');
+hide(5.0, '#s06-wk', 0.1);
+tl.set('#s06-wk', { display: 'none' }, 5.1);
+show(5.1, '#s06-reply', 0.1);
+type(5.1, '#s06-reply', 'Done! Focus is running for 25 minutes, and I added “call Sam” to your note.', 38);
+talk(5.1, 2.1);
+hide(7.25, '#s06-stopic', 0.1);
+
+      window.__timelines['s06'] = tl;
+    })();
+  </script>
+</template>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lumi Island settings</title>
+    <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+    <nav class="rail" aria-label="Settings sections">
+        <div class="brand"><span class="mini-island" aria-hidden="true"></span><span>Lumi Island</span></div>
+        <button class="nav selected" type="button" data-page="general">General</button>
+        <button class="nav" type="button" data-page="lumi">Lumi and voice</button>
+        <button class="nav" type="button" data-page="about">About</button>
+    </nav>
+
+    <main>
+        <section id="page-general" class="page">
+            <h1>General</h1>
+
+            <h2>Startup and position</h2>
+            <div class="card">
+                <div class="row"><div class="label"><b>Start with Windows</b><span>Open Lumi Island when you sign in</span></div>
+                    <label class="switch"><input type="checkbox" id="auto_start"><span></span></label></div>
+                <div class="row"><div class="label"><b>Position</b><span>Keep the island at the top centre of a display, or leave it where you drag it</span></div>
+                    <div class="segmented" role="radiogroup" aria-label="Position">
+                        <label><input type="radio" name="anchor" value="top_center"><span>Top centre</span></label>
+                        <label><input type="radio" name="anchor" value="free"><span>Free</span></label>
+                    </div></div>
+                <div class="row" id="row-monitor"><div class="label"><b>Display</b><span>Dragging the island onto another display also moves it there</span></div>
+                    <select id="monitor" aria-label="Display"></select></div>
+            </div>
+
+            <h2>Behaviour</h2>
+            <div class="card">
+                <div class="row"><div class="label"><b>Hide in full-screen apps</b><span>Step out of the way of videos, games and slideshows</span></div>
+                    <label class="switch"><input type="checkbox" id="hide_in_fullscreen"><span></span></label></div>
+                <div class="row"><div class="label"><b>Scroll on the island to change volume</b><span>Shows the level inside the island</span></div>
+                    <label class="switch"><input type="checkbox" id="scroll_volume"><span></span></label></div>
+                <div class="row"><div class="label"><b>Animation</b><span>How much Lumi and the island move. Subtle drops the floating and glances; Off keeps Lumi's colours and expressions but no motion.</span></div>
+                    <select id="motion" aria-label="Animation">
+                        <option value="system">Follow Windows</option>
+                        <option value="full">Full</option>
+                        <option value="subtle">Subtle</option>
+                        <option value="off">Off</option>
+                    </select></div>
+            </div>
+
+            <h2>Shortcut</h2>
+            <div class="card">
+                <div class="row"><div class="label"><b>Command bar</b><span>Opens a search box in the island from anywhere</span></div>
+                    <form class="inline" id="form-hotkey"><input type="text" id="hotkey" aria-label="Command bar shortcut" spellcheck="false"><button type="submit" class="btn">Save</button></form></div>
+                <p class="message" id="msg-hotkey" role="status"></p>
+            </div>
+        </section>
+
+        <section id="page-lumi" class="page" hidden>
+            <h1>Lumi and voice</h1>
+            <div class="card">
+                <div class="row"><div class="label"><b>Show Lumi</b><span>Turn the character off and keep just the island</span></div>
+                    <label class="switch"><input type="checkbox" id="lumi_visible"><span></span></label></div>
+                <div class="row" id="row-lumi-idle"><div class="label"><b>When Lumi is quiet</b><span>Peeking keeps Lumi tucked under the island until it has something to say or your pointer comes near</span></div>
+                    <select id="lumi_idle" aria-label="When Lumi is quiet">
+                        <option value="peek">Peek from under the island</option>
+                        <option value="always">Always show in full</option>
+                    </select></div>
+                <div class="row"><div class="label"><b>Colour</b><span>Lumi's body colour. Listening, speaking and focus still tint Lumi while they're happening.</span></div>
+                    <div class="lumi-preview" aria-hidden="true"><span class="preview-blob" id="preview-blob"><i></i><i></i></span></div>
+                    <div class="swatches" role="radiogroup" aria-label="Lumi's colour" id="swatches"></div></div>
+                <div class="row"><div class="label"><b>Celebrate milestones</b><span>A short spin and sparkles for 5 focus sessions in a day or a 7-day streak</span></div>
+                    <label class="switch"><input type="checkbox" id="celebrations"><span></span></label></div>
+                <div class="row"><div class="label"><b>Weekly focus recap</b><span>Once a week Lumi offers a short summary of last week's focus time</span></div>
+                    <label class="switch"><input type="checkbox" id="weekly_summary"><span></span></label></div>
+                <div class="row"><div class="label"><b>Getting started tour</b><span>Show the tips from the first launch again</span></div>
+                    <button type="button" class="btn" id="replay">Show tour</button></div>
+            </div>
+
+            <h2>Try a reaction</h2>
+            <div class="card tryout">
+                <p class="tryout-note">Plays on Lumi on the island for a few seconds, so you can see moments that normally only happen now and then.</p>
+                <div class="tryout-group" role="group" aria-labelledby="try-reactions"><b id="try-reactions">Reactions</b><div class="chips"><button type="button" class="chip" data-preview="greet">Greet</button><button type="button" class="chip" data-preview="happy">Happy</button><button type="button" class="chip" data-preview="giggle">Giggle</button><button type="button" class="chip" data-preview="surprised">Surprised</button><button type="button" class="chip" data-preview="shy">Shy</button><button type="button" class="chip" data-preview="sad">Sad</button><button type="button" class="chip" data-preview="dizzy">Dizzy</button><button type="button" class="chip" data-preview="yawn">Yawn</button><button type="button" class="chip" data-preview="notice">Notice</button><button type="button" class="chip" data-preview="success">Done</button><button type="button" class="chip" data-preview="nod">Nod</button><button type="button" class="chip" data-preview="reconsider">Rethink</button><button type="button" class="chip" data-preview="puzzled">Puzzled</button><button type="button" class="chip" data-preview="celebrate">Celebrate</button></div></div>
+                <div class="tryout-group" role="group" aria-labelledby="try-working"><b id="try-working">While working</b><div class="chips"><button type="button" class="chip" data-preview="listening">Listening</button><button type="button" class="chip" data-preview="thinking">Thinking</button><button type="button" class="chip" data-preview="checking">Checking</button><button type="button" class="chip" data-preview="working">Working</button><button type="button" class="chip" data-preview="replying">Replying</button><button type="button" class="chip" data-preview="speaking">Speaking</button><button type="button" class="chip" data-preview="waiting">Waiting</button></div></div>
+                <div class="tryout-group" role="group" aria-labelledby="try-moods"><b id="try-moods">Moods</b><div class="chips"><button type="button" class="chip" data-preview="dance">Dancing</button><button type="button" class="chip" data-preview="music">Music</button><button type="button" class="chip" data-preview="focus">Focus</button><button type="button" class="chip" data-preview="break">Break</button><button type="button" class="chip" data-preview="sleepy">Sleepy</button></div></div>
+            </div>
+
+            <h2>AI model</h2>
+            <div class="card">
+                <div class="row"><div class="label"><b>Provider</b><span>Who answers when you talk to Lumi</span></div>
+                    <select id="ai_provider" aria-label="AI provider"></select></div>
+                <div class="row" id="row-url"><div class="label"><b>Server address</b><span>Ollama: http://localhost:11434/v1. LM Studio: http://localhost:1234/v1. OpenRouter, Groq and others work too.</span></div>
+                    <form class="inline" id="form-url"><input type="text" id="custom_url" aria-label="Server address" spellcheck="false"><button type="submit" class="btn">Save</button></form></div>
+                <div class="row"><div class="label"><b id="key-title">API key</b><span id="key-help">Needed for Lumi to answer. Stored in Windows Credential Manager, not in a file.</span></div>
+                    <form class="inline" id="form-key"><input type="password" id="api_key" aria-label="API key" autocomplete="off" spellcheck="false"><button type="submit" class="btn">Save</button><button type="button" class="btn" id="remove-key">Remove</button></form></div>
+                <div class="row"><div class="label"><b>Chat model</b><span id="model-help">Used for typed chat and standard voice.</span></div>
+                    <form class="inline" id="form-model"><input type="text" id="chat_model" list="model-list" aria-label="Chat model" spellcheck="false"><datalist id="model-list"></datalist><button type="submit" class="btn">Save</button></form></div>
+                <div class="row" id="row-backup"><div class="label"><b>Backup model</b><span>Asked instead when your model is busy or slow at Google. Leave empty for none.</span></div>
+                    <form class="inline" id="form-backup"><input type="text" id="gemini_backup_model" list="model-list" aria-label="Backup model" spellcheck="false"><button type="submit" class="btn">Save</button></form></div>
+                <p class="message" id="msg-ai" role="status"></p>
+            </div>
+
+            <h2>Voice</h2>
+            <div class="card">
+                <div class="row"><div class="label"><b>Voice mode</b><span>Standard listens, then replies. Live (preview) is a flowing conversation you can interrupt; it needs Gemini.</span></div>
+                    <select id="voice_mode" aria-label="Voice mode">
+                        <option value="standard">Standard</option>
+                        <option value="live">Live (preview, Gemini only)</option>
+                    </select></div>
+                <div class="row" id="row-live-model"><div class="label"><b>Live model</b><span>A Gemini Live model with native audio. Model names change; check Google AI Studio.</span></div>
+                    <form class="inline" id="form-live-model"><input type="text" id="live_model" aria-label="Gemini Live model" spellcheck="false"><button type="submit" class="btn">Save</button></form></div>
+                <p class="message" id="msg-voice" role="status"></p>
+            </div>
+        </section>
+
+        <section id="page-about" class="page" hidden>
+            <h1>About</h1>
+            <div class="card prose">
+                <p><b>Lumi Island</b> shows a small black island at the top of your screen with Lumi, a character you can talk to.</p>
+                <p><b>Using it:</b> click the island for your PC at a glance, scroll on it for volume, right-click it for this menu, hover Lumi for the mic, and use the command bar shortcut to search apps or start a focus session.</p>
+                <p><b>Your data:</b> settings live in <code>config.json</code>, your note in <code>notes.txt</code> and your focus history in <code>focus_log.json</code>, all next to the app. API keys are kept in Windows Credential Manager. Nothing is sent anywhere except when you talk to Lumi: typed chat goes to the AI provider you chose (Gemini, Claude, OpenAI, or your own server); in standard voice mode your voice goes to Google to become text and your words go to that provider; in live mode your voice streams to Gemini while the mic is on.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="settings.js"></script>
+</body>
+</html>

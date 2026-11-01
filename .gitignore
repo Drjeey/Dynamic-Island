@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+
+# Per-user runtime settings (defaults live in lumi/config.py)
+config.json
+
+# Personal scratch notes
+notes.txt
+
+# HyperFrames caches
+video/.hyperframes/
+video/.thumbnails/
+video/.waveform-cache/

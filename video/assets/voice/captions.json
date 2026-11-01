@@ -1,0 +1,297 @@
+{
+ "s01": {
+  "duration": 5.4,
+  "phrases": [
+   {
+    "text": "This is Lumi Island.",
+    "start": 0.0,
+    "end": 1.17
+   },
+   {
+    "text": "A tiny home at the",
+    "start": 1.17,
+    "end": 2.23
+   },
+   {
+    "text": "top of your screen,",
+    "start": 2.23,
+    "end": 3.34
+   },
+   {
+    "text": "and a little friend who",
+    "start": 3.34,
+    "end": 4.69
+   },
+   {
+    "text": "lives in it.",
+    "start": 4.69,
+    "end": 5.4
+   }
+  ]
+ },
+ "s02": {
+  "duration": 7.15,
+  "phrases": [
+   {
+    "text": "Click it for your PC",
+    "start": 0.0,
+    "end": 1.26
+   },
+   {
+    "text": "at a glance.",
+    "start": 1.26,
+    "end": 1.94
+   },
+   {
+    "text": "Move away,",
+    "start": 1.94,
+    "end": 2.57
+   },
+   {
+    "text": "and it tucks itself back in.",
+    "start": 2.57,
+    "end": 4.46
+   },
+   {
+    "text": "When Lumi has nothing to say,",
+    "start": 4.46,
+    "end": 6.3
+   },
+   {
+    "text": "it just peeks.",
+    "start": 6.3,
+    "end": 7.15
+   }
+  ]
+ },
+ "s03": {
+  "duration": 7.74,
+  "phrases": [
+   {
+    "text": "Play some music,",
+    "start": 0.0,
+    "end": 1.04
+   },
+   {
+    "text": "and the island shows it.",
+    "start": 1.04,
+    "end": 2.36
+   },
+   {
+    "text": "Lumi even dances along.",
+    "start": 2.36,
+    "end": 3.85
+   },
+   {
+    "text": "Scroll on the island for volume,",
+    "start": 3.85,
+    "end": 5.94
+   },
+   {
+    "text": "or click for the player.",
+    "start": 5.94,
+    "end": 7.74
+   }
+  ]
+ },
+ "s04": {
+  "duration": 6.66,
+  "phrases": [
+   {
+    "text": "Need to concentrate?",
+    "start": 0.0,
+    "end": 1.18
+   },
+   {
+    "text": "Start a focus session.",
+    "start": 1.18,
+    "end": 2.76
+   },
+   {
+    "text": "Lumi keeps the time,",
+    "start": 2.76,
+    "end": 4.0
+   },
+   {
+    "text": "suggests a break,",
+    "start": 4.0,
+    "end": 5.06
+   },
+   {
+    "text": "and celebrates your streaks.",
+    "start": 5.06,
+    "end": 6.66
+   }
+  ]
+ },
+ "s05": {
+  "duration": 6.81,
+  "phrases": [
+   {
+    "text": "Press Windows,",
+    "start": 0.0,
+    "end": 0.92
+   },
+   {
+    "text": "Alt and Space for the command bar.",
+    "start": 0.92,
+    "end": 2.97
+   },
+   {
+    "text": "Search your apps,",
+    "start": 2.97,
+    "end": 4.09
+   },
+   {
+    "text": "start a focus session,",
+    "start": 4.09,
+    "end": 5.52
+   },
+   {
+    "text": "or just ask Lumi.",
+    "start": 5.52,
+    "end": 6.81
+   }
+  ]
+ },
+ "s06": {
+  "duration": 5.25,
+  "phrases": [
+   {
+    "text": "Lumi can do things for you,",
+    "start": 0.0,
+    "end": 1.45
+   },
+   {
+    "text": "and it shows every step.",
+    "start": 1.45,
+    "end": 2.99
+   },
+   {
+    "text": "You always see what it did,",
+    "start": 2.99,
+    "end": 4.53
+   },
+   {
+    "text": "as it happens.",
+    "start": 4.53,
+    "end": 5.25
+   }
+  ]
+ },
+ "s07": {
+  "duration": 3.93,
+  "phrases": [
+   {
+    "text": "Changed your mind?",
+    "start": 0.0,
+    "end": 0.99
+   },
+   {
+    "text": "Press Stop, or Escape,",
+    "start": 0.99,
+    "end": 2.28
+   },
+   {
+    "text": "and Lumi stops right there.",
+    "start": 2.28,
+    "end": 3.93
+   }
+  ]
+ },
+ "s08": {
+  "duration": 4.63,
+  "phrases": [
+   {
+    "text": "Or just talk.",
+    "start": 0.0,
+    "end": 1.07
+   },
+   {
+    "text": "The ring follows your voice,",
+    "start": 1.07,
+    "end": 2.75
+   },
+   {
+    "text": "and Lumi's mouth moves with its own.",
+    "start": 2.75,
+    "end": 4.63
+   }
+  ]
+ },
+ "s09": {
+  "duration": 5.31,
+  "phrases": [
+   {
+    "text": "Lumi has a personality, too.",
+    "start": 0.0,
+    "end": 1.89
+   },
+   {
+    "text": "Tap it, pet it,",
+    "start": 1.89,
+    "end": 2.79
+   },
+   {
+    "text": "give it a squish.",
+    "start": 2.79,
+    "end": 3.83
+   },
+   {
+    "text": "Just don't shake it too hard.",
+    "start": 3.83,
+    "end": 5.31
+   }
+  ]
+ },
+ "s10": {
+  "duration": 8.36,
+  "phrases": [
+   {
+    "text": "Choose Lumi's colour,",
+    "start": 0.0,
+    "end": 1.63
+   },
+   {
+    "text": "how lively it is,",
+    "start": 1.63,
+    "end": 2.94
+   },
+   {
+    "text": "and which AI it uses.",
+    "start": 2.94,
+    "end": 4.57
+   },
+   {
+    "text": "Gemini, Claude, OpenAI,",
+    "start": 4.57,
+    "end": 6.5
+   },
+   {
+    "text": "or a model on your own PC.",
+    "start": 6.5,
+    "end": 8.36
+   }
+  ]
+ },
+ "s11": {
+  "duration": 3.24,
+  "phrases": [
+   {
+    "text": "Lumi Island.",
+    "start": 0.0,
+    "end": 1.03
+   },
+   {
+    "text": "Small, helpful,",
+    "start": 1.03,
+    "end": 2.03
+   },
+   {
+    "text": "and always just there.",
+    "start": 2.03,
+    "end": 3.24
+   }
+  ]
+ }
+}
