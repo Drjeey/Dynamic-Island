@@ -3,7 +3,12 @@ import threading
 from datetime import datetime
 from urllib.parse import quote_plus
 
+from pathlib import Path
+
+import webview
+
 from . import credentials, providers
+from .agents import AGENTS
 from .config import EDITABLE, LIVE_VOICE_NOTICE, LUMI_COLORS, NOTES_PATH, VOICE_NOTICE
 from .providers import PROVIDERS
 from .system import SystemHelpers, Volume
@@ -20,6 +25,9 @@ COMMANDS = [
     ('next', 'Next track', 'next'),
     ('previous', 'Previous track', 'prev'),
     ('music', 'Show what\'s playing', 'music'),
+    ('claude', 'Run Claude Code', 'agent'),
+    ('codex', 'Run Codex', 'agent'),
+    ('agents', 'Show agent sessions', 'agent'),
     ('settings', 'Open Settings', 'settings'),
     ('quit', 'Quit Lumi Island', 'power'),
 ]
@@ -46,7 +54,7 @@ class IslandAPI:
     # --- startup ---
     def init(self):
         c = self._ctrl
-        return {'prefs': c.prefs(), 'onboarding': not c.config.get('onboarding_done'), 'media': c.media.state,
+        return {'prefs': c.prefs(), 'onboarding': not c.config.get('onboarding_done'), 'media': c.media.state, 'agents': c.agents.state(),
                 'hotkey_error': c.hotkey_error, 'greeting': self._daily_greeting()}
 
     def _daily_greeting(self):
@@ -82,6 +90,8 @@ class IslandAPI:
     def open_chat(self):
         chat = self._ctrl._chat
         self._ctrl.push('chat', {'messages': chat.messages if chat else []})
+    def open_agents(self, agent=None, prompt=''):
+        self._ctrl.push('agents_panel', dict(self._ctrl.agents.state(), pick=agent, prompt=prompt))
     def open_command_bar(self): self._ctrl.open_command_bar()
     def command_closed(self): self._ctrl.restore_foreground()
     def open_settings(self): self._ctrl.open_settings()
@@ -125,6 +135,17 @@ class IslandAPI:
         """Typed chat: returns {'reply': ...} or {'error': ...}; Lumi may act on the island before replying."""
         return self._ctrl.chat().ask(text)
 
+    # --- Claude Code and Codex ---
+    def run_agent(self, agent, prompt, cwd, mode='edit'):
+        """Returns {'ok': True} or {'error': ...}."""
+        error = self._ctrl.agents.run(agent, prompt, cwd, 'read' if mode == 'read' else 'edit')
+        return {'ok': error is None, 'error': error}
+    def stop_agent(self): return self._ctrl.agents.stop()
+    def choose_folder(self):
+        start = self._ctrl.config.get('agent_cwd') or str(Path.home())
+        picked = self._ctrl.window.create_file_dialog(webview.FOLDER_DIALOG, directory=start)
+        return picked[0] if picked else None
+
     # --- command bar ---
     def search(self, query):
         q = query.strip()
@@ -141,6 +162,12 @@ class IslandAPI:
                     results.append({'kind': 'command', 'id': 'stop_focus', 'title': 'Stop focus', 'glyph': icon})
                 else:
                     results.append({'kind': 'command', 'id': 'focus', 'arg': minutes, 'title': f'Start focus · {minutes} min', 'glyph': icon})
+            elif word in AGENTS:
+                if rest:
+                    results.append({'kind': 'command', 'id': 'agent', 'arg': {'agent': word, 'prompt': rest},
+                                    'title': f'Ask {AGENTS[word]}: "{rest}"', 'glyph': icon})
+                else:
+                    results.append({'kind': 'command', 'id': 'agents', 'arg': {'agent': word}, 'title': title, 'glyph': icon})
             elif word == 'note':
                 if rest:
                     results.append({'kind': 'command', 'id': 'note', 'arg': rest, 'title': f'Add "{rest}" to your note', 'glyph': icon})
@@ -187,6 +214,14 @@ class IslandAPI:
             if ident == 'next': c.media.control('next'); return None
             if ident == 'previous': c.media.control('prev'); return None
             if ident == 'music': threading.Timer(0.3, self.open_music).start(); return None
+            if ident == 'agent':
+                # Straight to work in the last folder; with no folder yet, the panel opens with the task filled in
+                cwd = c.config.get('agent_cwd')
+                if cwd and Path(cwd).is_dir():  # Path('') is the current folder, so an empty setting must not get this far
+                    error = c.agents.run(arg['agent'], arg['prompt'], cwd, c.config.get('agent_mode', 'edit'))
+                    return error or f'{AGENTS[arg["agent"]]} started'
+                threading.Timer(0.3, self.open_agents, kwargs=arg).start(); return None
+            if ident == 'agents': threading.Timer(0.3, self.open_agents, kwargs=arg or {}).start(); return None
             if ident == 'settings': c.open_settings(); return None
             if ident == 'quit': threading.Timer(0.2, c.quit).start(); return None
         except Exception as e:
@@ -202,7 +237,7 @@ PREVIEWS = {
     'puzzled': 'Puzzled', 'celebrate': 'Celebrate',
     'listening': 'Listening', 'thinking': 'Thinking', 'checking': 'Checking', 'working': 'Working', 'replying': 'Replying',
     'speaking': 'Speaking', 'waiting': 'Waiting',
-    'dance': 'Dancing', 'music': 'Music', 'focus': 'Focus', 'break': 'Break', 'sleepy': 'Sleepy',
+    'dance': 'Dancing', 'music': 'Music', 'focus': 'Focus', 'break': 'Break', 'sleepy': 'Sleepy', 'coding': 'Coding',
 }
 
 

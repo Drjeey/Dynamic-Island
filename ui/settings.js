@@ -25,11 +25,12 @@ function syncPositionRow() {
     $('monitor').disabled = free;
 }
 
-let values = {}, providers = {}, keys = {};
+// Not "keys": pywebview runs every reply beside a global `var keys`, and a clash makes the page drop them all
+let values = {}, providers = {}, keyInfo = {};
 
 function load() {
     api().get().then(res => {
-        ({ values, providers, keys } = res);
+        ({ values, providers, keys: keyInfo } = res);
         const { monitors, hotkey_error, colors } = res;
         for (const key of TOGGLES) $(key).checked = !!values[key];
         renderSwatches(colors, values.lumi_color);
@@ -52,7 +53,7 @@ function load() {
     });
 }
 
-const TOGGLES = ['auto_start', 'hide_in_fullscreen', 'scroll_volume', 'lumi_visible', 'celebrations', 'weekly_summary'];
+const TOGGLES = ['auto_start', 'hide_in_fullscreen', 'scroll_volume', 'lumi_visible', 'celebrations', 'weekly_summary', 'agent_watch'];
 const COLOR_NAMES = { cloud: 'Cloud', peach: 'Peach', mint: 'Mint', sky: 'Sky', lilac: 'Lilac', butter: 'Butter' };
 
 // Lumi's colour: a swatch per preset, with a small live preview of Lumi on the island's black
@@ -68,7 +69,7 @@ function renderSwatches(colors, current) {
 
 // The rows below the provider follow the chosen provider: its key, its model, and (for "Other") its server
 function syncProvider() {
-    const name = $('ai_provider').value, p = providers[name], key = keys[name];
+    const name = $('ai_provider').value, p = providers[name], key = keyInfo[name];
     $('row-url').classList.toggle('gone', name !== 'custom');
     $('row-backup').classList.toggle('gone', name !== 'gemini');
     $('gemini_backup_model').value = values.gemini_backup_model || '';

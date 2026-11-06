@@ -14,12 +14,17 @@ const dom = {
     cmdInput: $('cmd-input'), cmdPins: $('cmd-pins'), cmdResults: $('cmd-results'),
     card: $('card'), cardText: $('card-text'), cardStep: $('card-step'), cardPrimary: $('card-primary'), cardSecondary: $('card-secondary'),
     fpUi: $('focuspanel-ui'), fpTitle: $('fp-title'), fpToday: $('fp-today'), fpChips: $('fp-chips'), fpStart: $('fp-start'), fpTime: $('fp-time'),
-    chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input')
+    chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input'),
+    agentCurrent: $('agent-current'), agentDots: $('agent-dots'), agTabs: $('ag-tabs'), agSession: $('ag-session'), agTitle: $('ag-title'),
+    agSub: $('ag-sub'), agNodes: $('ag-nodes'), agEmpty: $('ag-empty'), agInput: $('ag-input'), agMode: $('ag-mode'), agFolder: $('ag-folder'),
+    agFolderName: $('ag-folder-name'), agPick: $('ag-pick')
 };
 const api = () => window.pywebview && window.pywebview.api;
 function call(name, ...args) { const a = api(); return a && a[name] ? a[name](...args) : Promise.resolve(null); }
 
-const EXPANDED = ['dashboard', 'notes', 'music', 'menu', 'command', 'focus', 'chat'];
+const EXPANDED = ['dashboard', 'notes', 'music', 'menu', 'command', 'focus', 'chat', 'agents'];
+// These panels hold text you select with the mouse, so only their headers drag the window
+const TEXT_PANELS = ['notes', 'command', 'chat', 'agents'];
 // Where Lumi sits under each island size (the command bar's and chat's heights vary, see lumiTop)
 const LUMI_TOP = { idle: 60, dashboard: 130, music: 176, notes: 206, menu: 90, focus: 166 };
 
@@ -31,6 +36,7 @@ let focusInfo = { today: { minutes: 0, sessions: 0 }, last_minutes: 25, duration
 let focusMinutes = 25;        // the length picked in the focus panel
 let statusActive = false;     // listening, thinking or speaking is showing in the compact island
 let media = { active: false };
+let agents = { sessions: [], running: false, available: {} };  // Claude Code and Codex sessions (agents.py)
 let previewAmbient = null;  // a mood being tried out from Settings
 let toast = null;             // { kind: 'toast' | 'volume' } while a short confirmation shows
 let chatWaiting = false;
@@ -91,7 +97,7 @@ const STATE_CLASS = {
     attentive: 'mood-attentive', checking: 'mood-checking', working: 'mood-working', replying: 'mood-replying',
     nod: 'mood-nod', reconsider: 'mood-reconsider', waiting: 'mood-waiting',
     surprised: 'mood-surprised', shy: 'mood-shy', sad: 'mood-sad', giggle: 'mood-giggle', happy: 'mood-happy',
-    dizzy: 'mood-dizzy', yawn: 'mood-yawn', notice: 'mood-notice', dance: 'mood-dance'
+    dizzy: 'mood-dizzy', yawn: 'mood-yawn', notice: 'mood-notice', dance: 'mood-dance', coding: 'mood-coding'
 };
 const lumiState = createLumiState({
     apply: s => { dom.lumi.className = STATE_CLASS[s] || 'mood-idle'; queueMicrotask(syncPeek); },
@@ -131,6 +137,7 @@ function setPeek(on) {
 // What's true about the PC right now; shown whenever Lumi isn't busy or reacting
 function syncAmbient() {
     lumiState.setAmbient(previewAmbient || (state === 'music' ? 'music'
+        : agents.running ? 'coding'  // glasses on while Claude Code or Codex works
         : focusRunning ? (focusKind === 'break' ? 'break' : 'focus')
         : away ? 'sleepy'
         : media.active && media.playing && intensity !== 'off' ? 'dance'  // Lumi dances while music plays
@@ -251,7 +258,9 @@ function addReceipt(status, text, kind) {
 }
 // A typed reply arriving piece by piece
 function onChatDelta(d) {
-    if (state !== 'chat' || cancelledRuns.has(d.run) || d.run !== currentRun && currentRun !== null) return;
+    if (cancelledRuns.has(d.run) || d.run !== currentRun && currentRun !== null) return;
+    if (d.run === currentRun) lumiState.setActivity('replying');  // text still arriving counts as progress for the watchdog
+    if (state !== 'chat') return;
     if (!streamEl) {
         if (typingEl) { typingEl.remove(); typingEl = null; }
         streamEl = addMessage('lumi', '');
@@ -380,7 +389,7 @@ function applyPrefs(p) {
 // --- STATE ENGINE ---
 function lumiTop(st) {
     if (peeking && st === 'idle') return PEEK_TOP;
-    if (st === 'command' || st === 'chat') return dom.island.offsetTop + parseFloat(dom.island.style.height || 300) + 16;
+    if (st === 'command' || st === 'chat' || st === 'agents') return dom.island.offsetTop + parseFloat(dom.island.style.height || 300) + 16;
     return LUMI_TOP[st] ?? 60;
 }
 function placeLumi() {
@@ -393,10 +402,10 @@ function placeLumi() {
 function setIslandState(st) {
     const leaving = state;
     state = st;
-    if (st !== 'command' && st !== 'chat') dom.island.style.height = '';
+    if (st !== 'command' && st !== 'chat' && st !== 'agents') dom.island.style.height = '';
     placeLumi();
     if (st === 'idle') renderCompact();
-    else dom.island.className = st + ' pywebview-drag-region'; // Ensure drag class stays
+    else dom.island.className = st + (TEXT_PANELS.includes(st) ? '' : ' pywebview-drag-region');
     // Compact, the island itself is the button; expanded, it's a group holding the panel's own buttons
     const compact = st === 'idle';
     dom.island.setAttribute('role', compact ? 'button' : 'group');
@@ -410,15 +419,19 @@ function setIslandState(st) {
 }
 let trackingPointer = false;
 
-// The compact island shows the most important live thing: status > confirmation > focus/break > now playing
+// The compact island shows the most important live thing: status > confirmation > an agent at work > focus/break > now playing
 function renderCompact() {
     let act = '';
+    const agent = shownAgent();
     if (statusActive) act = 'status';
     else if (toast) act = toast.kind;
+    else if (agent) act = 'agent';
     else if (focusRunning) act = 'focus';
     else if (media.active) act = 'media';
     dom.island.className = 'idle' + (act ? ' act-' + act : '') + (act === 'focus' && focusKind === 'break' ? ' break' : '')
-        + (act === 'status' && currentRun ? ' can-stop' : '') + ' pywebview-drag-region';
+        + (act === 'status' && currentRun ? ' can-stop' : '') + (act === 'agent' && agent.status !== 'running' ? ' agent-' + (agent.status === 'done' ? 'done' : 'failed') : '')
+        + ' pywebview-drag-region';
+    if (act === 'agent') renderAgentPill(agent);
     if (act === 'status') fitStatus();
     // What a screen reader hears, and what Enter will open
     else dom.island.setAttribute('aria-label', compactLabel(act));
@@ -427,6 +440,10 @@ function compactLabel(act) {
     if (act === 'media') return `Now playing: ${media.title || 'music'}${media.artist ? ' by ' + media.artist : ''}. Press Enter for the player`;
     if (act === 'focus') return `${focusKind === 'break' ? 'Break' : 'Focus'}, ${dom.focusTime.textContent} left. Press Enter for the timer`;
     if (act === 'toast') return dom.toastText.textContent;
+    if (act === 'agent') {
+        const s = shownAgent();
+        return `${s.status === 'running' ? s.agent_name + ': ' + s.current : dom.agentCurrent.textContent}. Press Enter to see its steps`;
+    }
     return 'Lumi Island. Press Enter to open the dashboard';
 }
 
@@ -539,6 +556,8 @@ window.updateState = function(msg) {
             if (data.milestone) { celebrateMilestone(); showBubble(data.milestone, 5000); }
             return;
         case 'command': openCommandBar(data.pins || []); return;
+        case 'agents': onAgents(data); return;
+        case 'agents_panel': onAgents(data); openAgents(data); return;
     }
 
     // Listening/thinking/speaking take over the compact island (you started them); other statuses never close a panel
@@ -809,7 +828,7 @@ dom.lumi.addEventListener('mouseleave', () => { clearTimeout(shyTimer); shyShown
 
 // --- TRY A REACTION (Settings): plays a reaction, a working state or a mood on Lumi for a few seconds ---
 const PREVIEW_ACTIVITIES = ['listening', 'thinking', 'checking', 'working', 'replying', 'speaking', 'waiting'];
-const PREVIEW_MOODS = ['dance', 'music', 'focus', 'break', 'sleepy'];
+const PREVIEW_MOODS = ['dance', 'music', 'focus', 'break', 'sleepy', 'coding'];
 let previewTimer = null, previewLevels = null;
 function preview(name, label) {
     if (currentRun) return;  // never over a real request
@@ -841,6 +860,158 @@ function endPreview() {
     syncPeek();
 }
 
+// --- AGENTS: Claude Code and Codex, run from here or followed while you run them yourself (agents.py) ---
+// Every step is a node: what you asked, each thing the agent does, and how it ended
+const NODE_ICON = { prompt: 'i-send', think: 'i-dots', read: 'i-eye', edit: 'i-note', run: 'i-agent', search: 'i-search', web: 'i-globe',
+                    tool: 'i-plug', agent: 'i-spin', plan: 'i-list', reply: 'i-dots', error: 'i-close' };
+const SHOW_FINISHED_MS = 6000;  // a finished session stays in the compact island this long
+const agentEnded = {};          // session id -> when this page saw it finish
+let agentTab = null, agentPick = 'claude', agentMode = 'edit', agentCwd = '', choosingFolder = false, agentsReceived = 0;
+
+function onAgents(d) {
+    const before = Object.fromEntries(agents.sessions.map(s => [s.id, s.status]));
+    agents = Object.assign({ sessions: [], running: false, available: {} }, d);
+    agentsReceived = performance.now();
+    for (const s of agents.sessions) {
+        if (!(s.id in before) && s.status === 'running') reactToContext('notice');  // a new session: Lumi looks up
+        if (before[s.id] === 'running' && s.status !== 'running') {
+            agentEnded[s.id] = performance.now();
+            lumiState.react(s.status === 'done' ? 'success' : s.status === 'failed' ? 'puzzled' : 'nod');
+            setTimeout(() => { if (state === 'idle') renderCompact(); }, SHOW_FINISHED_MS + 50);
+        }
+    }
+    syncAmbient();
+    if (state === 'idle') renderCompact();
+    if (state === 'agents') renderAgentsPanel();
+}
+// The session the compact island shows: one at work, or one that just finished
+function shownAgent() {
+    const list = agents.sessions || [];
+    return list.find(s => s.status === 'running')
+        || list.find(s => agentEnded[s.id] && performance.now() - agentEnded[s.id] < SHOW_FINISHED_MS) || null;
+}
+const agentShort = s => s.agent === 'claude' ? 'Claude' : 'Codex';
+function renderAgentPill(s) {
+    dom.agentCurrent.textContent = s.status === 'running' ? `${agentShort(s)} · ${s.current}`
+        : s.status === 'done' ? `${s.agent_name} is done` : s.status === 'stopped' ? `${s.agent_name} stopped` : `${s.agent_name} hit a problem`;
+    dom.agentDots.innerHTML = s.nodes.filter(n => n.kind !== 'prompt').slice(-7).map(n => `<i class="${n.state}"></i>`).join('');
+}
+
+function fmtElapsed(sec) { return sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${String(sec % 60).padStart(2, '0')}s`; }
+function selectedSession() {
+    const list = agents.sessions || [];
+    return list.find(s => s.id === agentTab) || list[0] || null;
+}
+function renderAgentsPanel() {
+    const list = agents.sessions || [];
+    const s = selectedSession();
+    dom.agTabs.innerHTML = list.length > 1 ? list.map(x =>
+        `<button type="button" role="tab" class="ag-tab ${x.status}" data-tab="${escapeHtml(x.id)}" aria-selected="${x === s}"><span>${escapeHtml(agentShort(x) + (x.folder ? ' · ' + x.folder : ''))}</span></button>`).join('') : '';
+    dom.agEmpty.style.display = s ? 'none' : '';
+    dom.agSession.style.display = s ? '' : 'none';
+    if (s) {
+        dom.agTitle.textContent = s.title || s.agent_name;
+        renderAgentMeta(s);
+        dom.agSession.classList.toggle('can-stop', s.source === 'island' && s.status === 'running');
+        const atBottom = dom.agNodes.scrollHeight - dom.agNodes.scrollTop - dom.agNodes.clientHeight < 8;
+        dom.agNodes.innerHTML = s.nodes.map(n => {
+            const icon = n.kind === 'end' ? (n.state === 'done' ? 'i-check' : 'i-close') : NODE_ICON[n.kind] || 'i-dots';
+            return `<li class="ag-node ${n.state} kind-${n.kind}"><span class="ag-dot"><svg class="icon"><use href="#${icon}"/></svg></span>`
+                + `<span class="ag-label">${escapeHtml(n.label)}</span>${n.count > 1 ? `<span class="ag-count">×${n.count}</span>` : ''}`
+                + `<span class="ag-detail">${escapeHtml(n.detail || '')}</span></li>`;
+        }).join('');
+        if (atBottom) dom.agNodes.scrollTop = dom.agNodes.scrollHeight;  // follow the newest step, unless you scrolled up
+    }
+    // The form: which agent, what it may do, and where
+    dom.agPick.querySelectorAll('[data-agent]').forEach(b => {
+        const have = agents.available[b.dataset.agent] !== false;
+        b.setAttribute('aria-checked', b.dataset.agent === agentPick);
+        b.disabled = !have;
+        b.title = have ? '' : 'Not installed on this PC';
+    });
+    dom.agMode.textContent = agentMode === 'edit' ? 'Can edit files' : 'Read only';
+    dom.agMode.title = agentMode === 'edit' ? 'The agent may change files in its folder (click for read only)' : 'The agent may only look (click to let it edit)';
+    dom.agFolderName.textContent = agentCwd ? agentCwd.split(/[\\/]/).filter(Boolean).pop() : 'Choose folder';
+    dom.agFolder.title = agentCwd || 'Choose the folder the agent works in';
+    dom.agFolder.classList.toggle('missing', !agentCwd);
+    layoutAgents();
+}
+function renderAgentMeta(s) {
+    const elapsed = s.elapsed + (s.status === 'running' ? Math.floor((performance.now() - agentsReceived) / 1000) : 0);
+    const where = s.source === 'watched' ? 'your session' : 'from Lumi';
+    dom.agSub.textContent = `${s.agent_name} · ${s.folder || where} · ${fmtElapsed(elapsed)}`;
+}
+function layoutAgents() {
+    const s = selectedSession();
+    const nodesH = s ? Math.min(216, s.nodes.length * 30) : 0;
+    dom.agNodes.style.height = nodesH + 'px';
+    const body = s ? 24 + 6 + nodesH : 34;
+    dom.island.style.height = (10 + 26 + 8 + body + 8 + 26 + 6 + 36 + 10) + 'px';
+    if (state === 'agents') placeLumi();
+    trackHitAreas(400);
+}
+function openAgents(d) {
+    hideCard();
+    if (tourStep >= 0) endTour(false);
+    statusActive = false;
+    const avail = agents.available || {};
+    agentPick = d.pick || d.agent || 'claude';
+    if (avail[agentPick] === false) agentPick = agentPick === 'claude' ? 'codex' : 'claude';
+    agentMode = d.mode === 'read' ? 'read' : 'edit';
+    agentCwd = d.cwd || '';
+    agentTab = null;
+    dom.agInput.value = d.prompt || '';
+    setIslandState('agents');
+    renderAgentsPanel();
+    startGrace();
+    scheduleCollapse(pointerInside ? 600 : 4000);
+    setTimeout(() => focusAgentInput(), 30);
+}
+// The elapsed time ticks while the panel is open
+setInterval(() => { const s = state === 'agents' && selectedSession(); if (s && s.status === 'running') renderAgentMeta(s); }, 1000);
+
+// The island is still growing when the field takes focus; don't let the browser scroll the panel sideways to show it
+function focusAgentInput() { dom.agInput.focus({ preventScroll: true }); dom.island.scrollLeft = 0; }
+function chooseFolder() {
+    choosingFolder = true;
+    clearTimeout(collapseTimer);
+    return call('choose_folder').then(path => {
+        choosingFolder = false;
+        if (path) agentCwd = path;
+        if (state === 'agents') { renderAgentsPanel(); focusAgentInput(); scheduleCollapse(pointerInside ? 600 : 4000); }
+        return path;
+    });
+}
+let agentSubmitting = false;  // Enter pressed twice starts one agent
+$('ag-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const text = dom.agInput.value.trim();
+    if (!text) { focusAgentInput(); return; }
+    if (agentSubmitting) return;
+    agentSubmitting = true;
+    try {
+        if (!agentCwd && !(await chooseFolder())) return;
+        const res = await call('run_agent', agentPick, text, agentCwd, agentMode);
+        if (res && res.error) { showBubble(res.error, 5000, true); return; }
+        dom.agInput.value = '';
+        agentTab = null;  // show the new session (running ones come first)
+    } finally {
+        agentSubmitting = false;
+    }
+});
+$('ag-stop').addEventListener('click', () => call('stop_agent'));
+$('ag-close').addEventListener('click', () => collapse());
+dom.agFolder.addEventListener('click', () => chooseFolder());
+dom.agMode.addEventListener('click', () => { agentMode = agentMode === 'edit' ? 'read' : 'edit'; renderAgentsPanel(); });
+dom.agPick.addEventListener('click', e => {
+    const b = e.target.closest('[data-agent]');
+    if (b && !b.disabled) { agentPick = b.dataset.agent; renderAgentsPanel(); }
+});
+dom.agTabs.addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]');
+    if (b) { agentTab = b.dataset.tab; dom.agNodes.scrollTop = 1e6; renderAgentsPanel(); }
+});
+
 // --- COLLAPSING ---
 // Panels close when the mouse leaves (or on Esc), never while you're pointing at them, typing, or waiting for Lumi.
 // The command bar closes only on Esc, when you run something, or when you switch to another window.
@@ -859,12 +1030,12 @@ function updatePointer() {
 // Stay open while typing or moving through the panel with the keyboard (not after a mere click)
 function focusKeepsOpen() {
     const a = document.activeElement;
-    if (a === dom.notesArea || (a === dom.chatInput && a.value)) return true;
-    return a !== dom.island && a !== dom.chatInput && dom.island.contains(a) && a.matches(':focus-visible');
+    if (a === dom.notesArea || ((a === dom.chatInput || a === dom.agInput) && a.value)) return true;
+    return a !== dom.island && a !== dom.chatInput && a !== dom.agInput && dom.island.contains(a) && a.matches(':focus-visible');
 }
 function scheduleCollapse(delay) {
     clearTimeout(collapseTimer);
-    if (state === 'command' || (state === 'chat' && chatWaiting)) return;
+    if (state === 'command' || (state === 'chat' && chatWaiting) || choosingFolder) return;
     if (!pointerSeenInside) delay = Math.max(delay, graceUntil - performance.now());
     collapseTimer = setTimeout(() => {
         if (pointerInside || focusKeepsOpen() || (state === 'chat' && chatWaiting)) return;
@@ -900,7 +1071,8 @@ window.addEventListener('blur', () => { if (state === 'command') { window.update
 // anything else the dashboard. Clicks that ended a drag are ignored.
 function openFromCompact() {
     if (state !== 'idle') return;
-    if (dom.island.classList.contains('act-media')) call('open_music');
+    if (dom.island.classList.contains('act-agent')) call('open_agents');
+    else if (dom.island.classList.contains('act-media')) call('open_music');
     else if (dom.island.classList.contains('act-focus')) call('open_focus');
     else call('open_dashboard');
 }
@@ -920,6 +1092,7 @@ dom.island.addEventListener('keydown', e => {
 dom.mic.addEventListener('click', e => { e.stopPropagation(); call('start_listening'); });
 $('btn-notes').addEventListener('click', () => call('open_notes'));
 dom.btnFocus.addEventListener('click', () => call('open_focus'));
+$('btn-agents').addEventListener('click', () => call('open_agents'));
 document.querySelectorAll('[data-media]').forEach(b => b.addEventListener('click', () => call('media', b.dataset.media)));
 $('menu-settings').addEventListener('click', () => { call('open_settings'); collapseSoon(); });
 $('menu-hide').addEventListener('click', () => { collapseSoon(); call('hide_for', 60); });
@@ -1151,6 +1324,7 @@ function init() {
         if (!info) return;
         applyPrefs(info.prefs);
         if (info.media) { media = info.media; renderMedia(); }
+        if (info.agents) onAgents(info.agents);
         if (info.hotkey_error) showSettingsCard(info.hotkey_error);
         if (info.onboarding) setTimeout(startOnboarding, 1200);
         else if (info.greeting) setTimeout(() => greet(info.greeting), 800);

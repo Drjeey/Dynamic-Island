@@ -12,6 +12,7 @@ The roadmap from the product audit, and a record of each phase as it's done. Ref
 | P | Choice of AI provider (Gemini, Claude, OpenAI, or any OpenAI-compatible server) | Done, 31 Oct 2026 |
 | F | Fixes from the island design critique (Impeccable, 25/40) | Done, 31 Oct 2026 |
 | G | More feelings and play: new emotions, interactions, dancing, and Try a reaction in Settings | Done, 31 Oct 2026 |
+| H | Claude Code and Codex on the island: run them, follow your own sessions as node states, and Lumi's coding look | Done, 1 Nov 2026 |
 
 ---
 
@@ -487,3 +488,82 @@ Each one plays on the real Lumi for about 2.5–3.5 s, with its name shown in th
 - **Real app** (over a local DevTools port, no clicks, no screenshots): the giggle try-out played (`mood-giggle`, "Giggle" in the island, Lumi out of peeking, back to normal after), and the log was clean. Restarted without the port afterwards.
 
 **Not tested yet:** how each emotion looks on your screen (that's what Try a reaction is for), petting and shaking with a real mouse, and dancing over a long listening session.
+
+## Phase H: Claude Code and Codex on the island (done, 1 Nov 2026)
+
+You asked for Lumi to run Claude Code and Codex from the island, to show what a session is doing as node states, and for a new expression: Lumi in glasses, thinking, while they run.
+
+**Where the tools are:** neither is on PATH. Lumi finds the ones the desktop apps install: the newest `claude.exe` under `%LOCALAPPDATA%\Claude-Data\…\claude-code\<version>\`, and `codex.exe` under `%LOCALAPPDATA%\OpenAI\Codex\bin\`. PATH and npm installs are checked first.
+
+| Part | What it does |
+|---|---|
+| **Run from the island** | New **Agents** panel (dashboard tile, the compact island while an agent works, or the command bar). Pick Claude Code or Codex, a folder, and **Can edit files** or **Read only**, then type the task. Claude Code runs as `claude -p … --output-format stream-json` (edit: `--permission-mode acceptEdits`; read only: only Read, Grep, Glob and web tools). Codex runs as `codex exec --json` with the `workspace-write` or `read-only` sandbox. Neither can ask for approval when run like this, so a step it isn't allowed to take shows as a failed node. **Stop** ends the agent and everything it started. |
+| **Command bar** | `claude <task>` and `codex <task>` start straight away in the last folder (or open the panel with the task filled in if no folder has been chosen yet); `agents` opens the panel. |
+| **Your own sessions** | Sessions you run yourself (terminal, Claude desktop, Codex desktop) show up too. Lumi reads the logs both tools keep on this PC: `~/.claude/projects/*/*.jsonl` and `~/.codex/sessions/<date>/rollout-*.jsonl`, only files written in the last 20 s, every 1.5 s. Codex's built-in reviewer logs are skipped. Nothing is sent anywhere. Off switch: Settings → General → **Show Claude Code and Codex sessions**. |
+| **Node states** | Each session is a chain: your task → each step (Thinking, Reading *file*, Editing *file*, a command, Searching files, Searching the web, a tool, Starting a helper, Updating the plan) → Done / Stopped / problem. Nodes are blue and pulsing while running, grey when done, red if failed; repeats merge ("Editing island.js ×9"). The compact island shows the current step and the last 7 nodes as dots; the panel shows the full chain, with tabs when several sessions are going. |
+| **Lumi's coding look** | While any agent works, Lumi wears round reading glasses, reads along a line, looks up to think (thought dots), and bobs gently. A new session gets a "notice"; finishing gets a hop, a problem gets "puzzled". **Coding** is in Settings → Try a reaction → Moods. |
+| **Fixable failures** | Known errors become a next step, e.g. "Claude Code's own login has no credit. In a terminal, run claude and type /login." |
+
+**Something to know:** on this PC the standalone `claude.exe` answers **"Credit balance is too low"**. The Claude desktop app signs in its own way; the command-line tool outside it uses a login with no credit. Until you run `claude` in a terminal and `/login` with your subscription, runs from the island will stop with that hint. Following your own Claude Code sessions isn't affected, and Codex works.
+
+**How it was tested:**
+- **Parsers on real logs:** this Claude Code session's own log (prompt, edits merged into one node, a running command), a real Codex desktop session (commands, an image, answers, Done), and the Codex and Claude probe outputs.
+- **Real runs through the manager:**
+  - Codex, read-only, "list the files here": prompt → Running a command (`Get-ChildItem -Name`) → answer → Done in 15 s;
+  - Claude Code: ends as a problem with the login hint;
+  - Stop during a Codex command: ended as Stopped 0.5 s later;
+  - bad input (no task, missing folder, unknown agent) gives a message;
+  - the watcher found this live session, with its title and folder;
+  - the command bar offers `Ask Claude Code: "fix the bug"`.
+- **Browser copy of the interface** (with a pretend Python side):
+  - panel opens with the right defaults; folder picking, mode and agent switches work; the run is sent with folder, task and mode;
+  - nodes appear live with icons and states;
+  - the pill shows `Codex · Reading settings.css` with dots, then "is done" (green) or "hit a problem" (red), and clears after 6 s;
+  - Lumi wears the glasses while it runs (screenshot), and in the try-out;
+  - tabs switch between sessions; Stop only shows for sessions started from Lumi;
+  - the dashboard fits the new tile (button tiles 64 → 58 px, no overflow).
+  - Fixed during testing: the panel shifted 23 px sideways when the task field took focus while the island was still growing.
+- **Real app:** started on the new code with a clean log (only the existing comtypes warning).
+
+**Follow-up, same day: testing a Claude Code run after you logged in.**
+- Runs still stop at once with "Credit balance is too low", in both read-only and edit mode.
+- `claude auth status` shows why: the CLI is signed in with `authMethod: api_key` ("/login managed key"). That's an Anthropic Console organization billed per use, and it has no credit. It isn't your Claude subscription.
+- **To fix:** in a terminal, run `claude`, type `/logout`, then `/login`, and choose the **Claude account with subscription** option (not Anthropic Console).
+- Also fixed: when Lumi is started from inside a Claude desktop session (as it was during testing), the agent no longer inherits that session's private endpoint and sign-in settings (`ANTHROPIC_BASE_URL`, `USE_LOCAL_OAUTH`, `CLAUDE_AGENT_SDK_*`). It wasn't the cause here, but it would have sent runs to the wrong place.
+
+**Not tested yet:**
+- how it looks on your screen over a real working session;
+- an island-started Claude Code run that succeeds (needs the subscription login above);
+- a Codex run in "Can edit files" mode that changes files;
+- several agents at once over a long time.
+
+## Fix: critical and high bugs from the functional test (6 Nov 2026)
+
+A functional test of the whole app found 1 critical and 7 high bugs. All eight are fixed. The medium and small ones from that test are not.
+
+| # | Bug | Cause | Fix |
+|---|---|---|---|
+| 1 | **Settings couldn't load:** empty dropdowns, every switch off, no messages | pywebview runs each reply beside a global `var keys`; `settings.js` also declared `keys`, so the browser rejected every reply, and pywebview still reported success | Renamed it `keyInfo` (`ui/settings.js`) |
+| 2 | With no saved folder, the command bar started an agent in Lumi's own folder, able to edit files | `Path('')` means the current folder, so the check always passed | `lumi/api.py` opens the panel; `AgentManager.run` refuses an empty folder |
+| 3 | API errors in sessions you run yourself (rate limit, no credit, server trouble) stayed "running" for 10 minutes | Only `end_turn` ended a turn. Claude Code writes errors as its own `stop_sequence` lines | A line flagged as an API error ends the session as failed, with its hint. A plain `stop_sequence` line ("No response requested.") ends it as finished |
+| 4 | Prompts starting with pasted text were ignored in sessions you run yourself | Anything starting with `<` counted as bookkeeping | New `_asked()` in `lumi/agents.py` keeps your words, or the paste if that's all there is |
+| 5 | The Agents panel never closed by itself | `focusKeepsOpen()` excluded the chat box but not the agent box | Excluded it too; the box keeps the panel open only while it has text |
+| 6 | Replies still streaming were cut off at 45 s | Streamed text didn't count as progress for the watchdog | Each piece of text restarts it. A reply that really stalls still gets the card after 45 s |
+| 7 | Dragging across text moved the window | `easy_drag=True` drags from anywhere, and the drag class covered the whole island | `easy_drag=False`. Notes, chat, agents and the command bar now drag by their headers (the command bar has none). The compact island, Lumi, and the dashboard, music, focus and menu panels drag as before |
+| 8 | Two agents could start at once, leaving one that Stop couldn't reach; a finished run could block the next with "still working" | The check and the start were separate steps, and a process still exiting counted as working | `_starting` holds the place until the process exists; a session that has reported its end no longer blocks; the form ignores a second Enter |
+
+**A mistake caught while fixing #3:** the test report called these sessions stuck, and the first fix marked `stop_sequence` as finished. That made a Claude Code "no credit" failure show as Done. A check of real logs then showed that every `stop_sequence` line is written by the tool itself, and most are errors, so #3 was changed to the fix above.
+
+**How it was tested** (on scratch copies of the fixed code, with a separate `config.json`):
+- **Python (new checks, all passing):** an empty folder from both paths; API errors in both spellings; empty turns; pasted prompts; three submits at once start one agent; a lingering process doesn't block; a failed start doesn't block the next.
+- **Real logs, replayed:** 40 Claude Code logs with no crashes, none older left "running", and 26 prompts with pasted text started a clean turn.
+- **The real app, driven over a local DevTools port with simulated mouse events:**
+  - Settings shows saved values, shows errors, gets replies and has no script errors;
+  - text in the note, chat and agent box doesn't move the window, while the island, Lumi, the dashboard and panel headers do;
+  - a real Claude Code run shows as failed with the login hint, and Codex starts straight after and finishes;
+  - double Enter sends one run;
+  - streaming past 52 s isn't cut off, and a stalled reply gets the card at 45 s;
+  - no script errors.
+- **One check failed once:** in one full run the Agents panel stayed open. It closed in the other full run and 6 out of 6 repeats, including right after Settings. The repeats show the real cursor crossing the island at times, and a cursor resting on the panel keeps it open on purpose. That's the likely cause, but it isn't proven.
+
+**Not tested yet:** dragging and selecting text with a real mouse; a successful Claude Code run (the account still has no credit); the folder picker. Voice, multiple displays and hiding in full-screen apps weren't part of this test.

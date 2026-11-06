@@ -71,6 +71,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #island.idle.act-volume { width: 210px; }
 #island.idle.act-focus { width: 220px; border-color: rgba(245, 184, 61, 0.35); }
 #island.idle.act-media { width: 232px; }
+#island.idle.act-agent { width: 270px; }
 .compact { gap: 8px; padding: 0 14px; box-sizing: border-box; font-size: 13px; font-weight: 600; }
 .compact svg.icon { width: 16px; height: 16px; }
 #status-ui.listening { color: var(--blue); }
@@ -124,15 +125,16 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 /* Only the active state's content is shown */
 .content { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; opacity: 0; visibility: hidden; position: absolute; inset: 0; transition: opacity 0.18s ease, visibility 0s 0.18s; }
 #island.act-status #status-ui, #island.act-toast #toast-ui, #island.act-volume #volume-ui, #island.act-focus #focus-ui, #island.act-media #media-ui,
+#island.act-agent #agent-ui,
 #island.dashboard #dashboard-ui, #island.music #music-ui, #island.notes #notes-ui, #island.menu #menu-ui, #island.command #command-ui,
-#island.focus #focuspanel-ui, #island.chat #chat-ui {
+#island.focus #focuspanel-ui, #island.chat #chat-ui, #island.agents #agents-ui {
     opacity: 1; visibility: visible; transition: opacity 0.2s ease 0.14s, visibility 0s; /* fade in once the shape has mostly settled */
 }
 
 /* --- DASHBOARD --- */
 .stats-container { display: flex; gap: 8px; padding: 0 12px; width: 100%; box-sizing: border-box; }
 .tile { flex: 1 1 auto; height: 76px; border-radius: 16px; background: var(--tile); display: flex; align-items: center; gap: 8px; padding: 0 10px; box-sizing: border-box; }
-button.tile { justify-content: center; flex-direction: column; gap: 6px; flex: 0 0 64px; padding: 0; transition: background 0.15s, transform 0.12s; }
+button.tile { justify-content: center; flex-direction: column; gap: 6px; flex: 0 0 58px; padding: 0; transition: background 0.15s, transform 0.12s; }
 button.tile:hover { background: var(--tile-hover); }
 button.tile:active { transform: scale(0.96); }
 button.tile span { font-size: 11px; color: var(--text-2); }
@@ -234,6 +236,75 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .glyph-lumi { width: 20px; height: 16px; flex: none; background: var(--lumi); border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%; position: relative; }
 .glyph-lumi::before, .glyph-lumi::after { content: ''; position: absolute; top: 5px; width: 3px; height: 4px; border-radius: 2px; background: var(--eye); }
 .glyph-lumi::before { left: 5px; } .glyph-lumi::after { right: 5px; }
+
+/* --- AGENTS (Claude Code and Codex) --- */
+/* Each step an agent takes is a node: grey when done, blue and pulsing while it runs, red if it failed */
+#island.agents { width: 480px; border-radius: 24px; }  /* height is set from the steps shown */
+#agent-ui { color: var(--text); }
+#agent-ui > svg.icon { color: var(--blue); }
+#agent-ui #agent-current { flex: 1; min-width: 0; }
+#island.agent-done #agent-ui > svg.icon { color: var(--green); }
+#island.agent-failed #agent-ui > svg.icon { color: var(--red); }
+.agent-dots { display: flex; align-items: center; gap: 3px; flex: none; }
+.agent-dots i { width: 6px; height: 6px; border-radius: 50%; background: #3A3A42; }
+.agent-dots i.done { background: var(--text-2); }
+.agent-dots i.failed { background: var(--red); }
+.agent-dots i.active { background: var(--blue); animation: node-pulse 1.2s ease-in-out infinite; }
+@keyframes node-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0.6); } 50% { box-shadow: 0 0 0 3px rgba(76, 141, 255, 0); } }
+
+#agents-ui { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 10px; box-sizing: border-box; gap: 8px; cursor: default; }
+.ag-head-icon { width: 16px !important; height: 16px !important; color: var(--blue); }
+.ag-tabs { display: flex; gap: 4px; min-width: 0; }
+.ag-tab { height: 22px; max-width: 120px; padding: 0 9px; border-radius: 11px; font-size: 11px; color: var(--text-2); background: transparent; display: flex; align-items: center; gap: 5px; }
+.ag-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-tab::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--text-2); flex: none; }
+.ag-tab.running::before { background: var(--blue); animation: node-pulse 1.2s ease-in-out infinite; }
+.ag-tab.failed::before { background: var(--red); }
+.ag-tab.done::before { background: var(--green); }
+.ag-tab:hover { background: var(--tile); color: var(--text); }
+.ag-tab[aria-selected="true"] { background: var(--tile); color: var(--text); }
+.ag-session { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.ag-meta { display: flex; align-items: center; gap: 8px; padding: 0 6px; font-size: 12px; }
+.ag-title { flex: 1; min-width: 0; font-weight: 600; }
+.ag-sub { color: var(--text-2); flex: none; font-variant-numeric: tabular-nums; }
+.ag-stop { display: none; height: 22px; padding: 0 10px; border-radius: 11px; font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.08); color: var(--text); }
+.ag-stop:hover { background: rgba(255,255,255,0.16); }
+.ag-session.can-stop .ag-stop { display: block; }
+.ag-nodes { list-style: none; margin: 0; padding: 0 4px; overflow-y: auto; max-height: 216px; user-select: text; }
+.ag-nodes::-webkit-scrollbar { width: 6px; }
+.ag-nodes::-webkit-scrollbar-thumb { background: #2A2A30; border-radius: 3px; }
+.ag-node { position: relative; display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 4px; font-size: 12.5px; }
+/* The line joining each node to the next */
+.ag-node:not(:last-child)::after { content: ''; position: absolute; left: 14px; top: 23px; height: 14px; width: 2px; border-radius: 1px; background: #2A2A30; }
+.ag-node.done:not(:last-child)::after { background: #3A3A42; }
+.ag-dot { width: 22px; height: 22px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: var(--tile); color: var(--text-2); box-sizing: border-box; border: 1.5px solid #3A3A42; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+.ag-dot svg.icon { width: 12px; height: 12px; stroke-width: 2; }
+.ag-node.active .ag-dot { border-color: var(--blue); color: var(--blue); animation: node-ring 1.4s ease-out infinite; }
+.ag-node.failed .ag-dot { border-color: var(--red); color: var(--red); }
+.ag-node.kind-prompt .ag-dot { background: var(--lumi); border-color: var(--lumi); color: var(--eye); }
+.ag-node.kind-end.done .ag-dot { background: var(--green); border-color: var(--green); color: var(--island); }
+@keyframes node-ring { 0% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0.55); } 80%, 100% { box-shadow: 0 0 0 6px rgba(76, 141, 255, 0); } }
+.ag-label { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-node.active .ag-label { color: var(--text); font-weight: 600; }
+.ag-node.done .ag-label { color: var(--text-2); }
+.ag-node.kind-prompt .ag-label, .ag-node.kind-end .ag-label { color: var(--text); }
+.ag-count { flex: none; font-size: 10.5px; color: var(--text-2); background: var(--tile); border-radius: 8px; padding: 1px 6px; }
+.ag-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); font-family: var(--font-mono); font-size: 11px; }
+.ag-node.kind-end .ag-detail, .ag-node.kind-reply .ag-detail { font-family: var(--font); font-size: 12px; }
+.ag-form { display: flex; flex-direction: column; gap: 6px; }
+.ag-options { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.ag-seg { display: flex; background: var(--tile); border-radius: 13px; padding: 2px; flex: none; }
+.ag-seg button { height: 22px; padding: 0 10px; border-radius: 11px; font-size: 11.5px; color: var(--text-2); }
+.ag-seg button[aria-checked="true"] { background: var(--tile-hover); color: var(--text); font-weight: 600; }
+.ag-seg button:disabled { opacity: 0.4; cursor: default; }
+.ag-chip { height: 26px; padding: 0 10px; border-radius: 13px; background: var(--tile); font-size: 11.5px; color: var(--text-2); display: flex; align-items: center; gap: 6px; flex: none; }
+.ag-chip:hover { background: var(--tile-hover); color: var(--text); }
+.ag-chip svg.icon { width: 13px; height: 13px; }
+.ag-folder { flex: 1 1 auto; min-width: 0; }
+.ag-folder.missing { color: var(--amber); }
+#ag-input { flex: 1; background: transparent; border: 0; color: var(--text); font: 13px var(--font); user-select: text; caret-color: var(--blue); }
+#ag-input::placeholder { color: var(--text-2); }
+#ag-input:focus-visible { outline: none; }
 
 /* --- MENU (right-click) --- */
 #menu-ui { gap: 6px; padding: 0 10px; box-sizing: border-box; }
@@ -498,7 +569,25 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 #lumi-thought i { position: absolute; left: 2px; bottom: 2px; width: 4px; height: 4px; border-radius: 50%; background: var(--text-2); animation: think-dot 1.5s ease-out infinite; }
 #lumi-thought i:nth-child(2) { animation-delay: 0.5s; }
 #lumi-thought i:nth-child(3) { animation-delay: 1s; }
-.mood-thinking #lumi-thought, .mood-checking #lumi-thought { opacity: 1; }
+.mood-thinking #lumi-thought, .mood-checking #lumi-thought, .mood-coding #lumi-thought { opacity: 1; }
+/* Coding: Claude Code or Codex is working. Lumi puts on reading glasses, reads along, and looks up now and then to think */
+#lumi-glasses { opacity: 0; transform: translateY(-3px); transform-box: view-box; transition: opacity 0.25s, transform 0.3s var(--spring); pointer-events: none; }
+#lumi-glasses .lens { fill: rgba(207, 226, 255, 0.28); stroke: var(--eye); stroke-width: 1.7; }
+#lumi-glasses .bridge, #lumi-glasses .temple { fill: none; stroke: var(--eye); stroke-width: 1.7; stroke-linecap: round; }
+#lumi-glasses .shine { fill: none; stroke: #fff; stroke-width: 1.1; stroke-linecap: round; opacity: 0.7; }
+.mood-coding #lumi-glasses { opacity: 1; transform: none; }
+.mood-coding #lumi-eyes { animation: read-think 6s ease-in-out infinite; }
+.mood-coding .eye-g { transform: scale(0.82); }
+.mood-coding #lumi-body { animation: bob 2.4s ease-in-out infinite; }
+.mood-coding #lumi-thought { transition-delay: 0.2s; }
+/* Reading left to right along a line, twice, then a look up and to the side while it thinks */
+@keyframes read-think {
+    0%, 100% { transform: translate(-2px, 1.5px); }
+    14% { transform: translate(2px, 1.5px); } 16% { transform: translate(-2px, 2.5px); } 30% { transform: translate(2px, 2.5px); }
+    36%, 62% { transform: translate(1.5px, -2.5px); }
+    70% { transform: translate(-2px, 1.5px); }
+}
+.motion-reduced .mood-coding #lumi-eyes { animation: none; transform: translate(1.5px, -2px); }
 
 /* Milestone: one spin with a burst of sparkles */
 .celebrate #lumi-body { animation: spin-hop 0.9s var(--spring) 1; }

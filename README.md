@@ -27,6 +27,7 @@ setx GEMINI_API_KEY "your-key-here"
 - **Focus:** pick 15, 25, 45 or 60 minutes (or a 5-minute break). When a session ends Lumi offers a break, and today's total is shown in the panel.
 - **Click Lumi** to chat by typing. Ask questions, or ask Lumi to do things: "focus for 45 minutes", "add milk to my note", "pause the music", "open Calculator", "how's my battery?".
 - **Press Win+Alt+Space** anywhere to open the command bar: search and open apps, ask Lumi a question, `focus 45`, `break`, `note buy milk`, `chat`, `play`, `next`, `settings`, or search the web.
+- **Agents:** open **Agents** from the dashboard to give Claude Code or Codex a task in a folder (or type `claude <task>` / `codex <task>` in the command bar). Each step shows as a node: thinking, reading, editing, running a command, then done. Sessions you run yourself show up too, and Lumi puts on its reading glasses while any of them works.
 - **Right-click** the island for Settings, Hide for 1 hour, and Quit.
 - **Scroll** on the island to change the volume; the level shows in the island.
 - **Hover** over Lumi and click the mic to talk. The first click explains where your voice is sent; click again to start. In Settings you can switch to **Live (preview)** voice, a flowing conversation you can interrupt (headphones recommended).
@@ -52,6 +53,7 @@ The microphone uses `sounddevice`, which installs on any Python version. If `PyA
 | `lumi/live.py` | Live voice through Gemini Live |
 | `lumi/tools.py` | What Lumi can do on the island when asked |
 | `lumi/focus.py` | Focus sessions, breaks and the focus log |
+| `lumi/agents.py` | Claude Code and Codex: running them, following your own sessions, and their steps as nodes |
 | `lumi/credentials.py` | The Gemini key in Windows Credential Manager |
 | `ui/` | The island and Settings pages (HTML, CSS, JavaScript) |
 
@@ -73,5 +75,7 @@ Created next to `island7.py`. Everything here can also be changed in Settings. F
 | `gemini_model` | Chat model, default `gemini-2.5-flash` |
 | `voice_mode` | `standard` (listen, then reply) or `live` (Gemini Live, preview) |
 | `live_model` | Gemini Live model used in live mode |
+| `agent_watch` | `false` to stop showing Claude Code and Codex sessions you run yourself |
+| `agent_kind`, `agent_mode`, `agent_cwd` | The agent, permission (`edit` or `read`) and folder used last in the Agents panel |
 | `voice_notice_seen`, `live_notice_seen` | Set after the first mic click in each voice mode shows the privacy notice |
 | `onboarding_done` | Set after the getting-started tour |

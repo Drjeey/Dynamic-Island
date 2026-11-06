@@ -51,6 +51,10 @@ DEFAULT_CONFIG = {
     "custom_url": "http://localhost:11434/v1",  # Ollama's default; LM Studio uses http://localhost:1234/v1
     "voice_mode": "standard",          # "standard": record, then reply; "live": streaming conversation (Gemini Live)
     "live_model": "gemini-2.5-flash-native-audio-preview-09-2025",
+    "agent_watch": True,               # follow Claude Code and Codex sessions running on this PC (reads their local logs)
+    "agent_kind": "claude",            # the agent picked last in the Agents panel: claude or codex
+    "agent_mode": "edit",              # "edit": the agent may change files in its folder; "read": it may only look
+    "agent_cwd": "",                   # the folder the agent worked in last
     "voice_notice_seen": False,
     "live_notice_seen": False,
     "onboarding_done": False,
@@ -67,7 +71,7 @@ EDITABLE = {
     'anchor': str, 'monitor': int, 'auto_start': bool, 'hide_in_fullscreen': bool, 'scroll_volume': bool,
     'motion': str, 'lumi_visible': bool, 'hotkey': str, 'voice_mode': str, 'live_model': str,
     'ai_provider': str, 'gemini_model': str, 'gemini_backup_model': str, 'claude_model': str, 'openai_model': str, 'custom_model': str, 'custom_url': str,
-    'lumi_color': str, 'celebrations': bool, 'weekly_summary': bool, 'lumi_idle': str,
+    'lumi_color': str, 'celebrations': bool, 'weekly_summary': bool, 'lumi_idle': str, 'agent_watch': bool,
 }
 
 # Lumi's colour presets (soft, light tints so the dark eyes stay readable)

@@ -13,6 +13,7 @@ import webview
 
 from .api import IslandAPI, SettingsAPI
 from .activity import ActivityBus
+from .agents import AgentManager
 from .providers import PROVIDERS
 from .apps import AppIndex
 from .credentials import migrate_from_config
@@ -68,6 +69,7 @@ class IslandController:
         self.hotkey = GlobalHotkey(self.open_command_bar)
         self.focus = FocusManager(self.push)
         self.activity = ActivityBus(self.push)  # what Lumi is doing, as events for the page
+        self.agents = AgentManager(self)  # Claude Code and Codex sessions, run here or followed
         self.focus.milestone_allowed = self._milestone_allowed
         self._chat = None
         self._live = None
@@ -163,6 +165,7 @@ class IslandController:
         if key == 'auto_start': self._apply_auto_start()
         if key in ('anchor', 'monitor'): self._snap()
         if key in AI_KEYS: self.reset_chat()
+        if key == 'agent_watch' and not value: self.agents.forget_watched()
         if key in self.PREF_KEYS: self.push('prefs', self.prefs())
         return None
 
@@ -243,6 +246,7 @@ class IslandController:
 
     def quit(self):
         self.hotkey.unregister()
+        self.agents.stop()
         if self.settings_window: self.settings_window.destroy()
         if self.window: self.window.destroy()
 
@@ -495,6 +499,7 @@ class IslandController:
         SystemHelpers.start_samplers()
         self._apply_auto_start()
         self.media.start()
+        self.agents.start()
         self.hotkey_error = self.hotkey.register(self.config.get('hotkey', 'Win+Alt+Space'))
         # Load the pinned apps' icons and open the audio device now, so the command bar and volume respond instantly
         threading.Thread(target=lambda: (self.apps.ready.wait(), self.apps.pins()), daemon=True).start()
@@ -502,12 +507,12 @@ class IslandController:
 
         geo = self.config['geometry']
         free = self.config.get('anchor') == 'free'
-        # ENABLED easy_drag=True for crash-proof moving
+        # easy_drag would make any press-and-drag move the window, even selecting text; the page marks what drags it
         # transparent=True alone leaves a grey background on Windows; see _on_shown
         self.window = webview.create_window(
             WINDOW_TITLE,
             url='ui/island.html',
-            frameless=True, easy_drag=True, on_top=True, shadow=False,
+            frameless=True, easy_drag=False, on_top=True, shadow=False,
             transparent=True, background_color=TRANSPARENT_KEY,
             width=WINDOW_WIDTH, height=360,
             x=geo.get('x') if free else None, y=geo.get('y') if free else 0,

@@ -33,11 +33,16 @@
         <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
         <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></symbol>
         <symbol id="i-spin" viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 1-8 8"/></symbol>
+        <symbol id="i-agent" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M7 10l3 2.5L7 15M12.5 15H17"/></symbol>
+        <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
+        <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+        <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3a5.5 5.5 0 0 1-11 0zM12 16.5V21"/></symbol>
+        <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/></symbol>
         <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></symbol>
     </svg>
 
     <div id="lumi-container" class="mood-idle">
-        <div id="lumi-body" aria-hidden="true">
+        <div id="lumi-body" class="pywebview-drag-region" aria-hidden="true">
             <!-- Lumi's face: each expression shows a different set of these parts (see "LUMI'S FACE" in island.css) -->
             <svg id="lumi-face" viewBox="0 0 60 50">
                 <g id="lumi-eyes">
@@ -56,6 +61,8 @@
                 </g>
                 <ellipse id="lumi-mouth" cx="30" cy="34" rx="3.2" ry="2.4"/>
                 <g id="lumi-cheeks"><ellipse cx="13" cy="30" rx="3.2" ry="1.9"/><ellipse cx="47" cy="30" rx="3.2" ry="1.9"/></g>
+                <!-- Reading glasses, worn while Claude Code or Codex is working -->
+                <g id="lumi-glasses"><path class="temple" d="M13.6 19.5 6.5 16.5M46.4 19.5 53.5 16.5"/><path class="bridge" d="M28.4 20.6q1.6-1.6 3.2 0"/><circle class="lens" cx="21" cy="21" r="7.4"/><circle class="lens" cx="39" cy="21" r="7.4"/><path class="shine" d="M16.6 18.2q1.4-2.4 4-2.8M34.6 18.2q1.4-2.4 4-2.8"/></g>
                 <g id="lumi-mark"><path d="M54 -4v6.5"/><circle cx="54" cy="7" r="1.1"/></g>
             </svg>
             <div id="lumi-zzz"><span>z</span><span>z</span></div>
@@ -83,6 +90,7 @@
         <div class="content compact" id="toast-ui" aria-hidden="true"><svg class="icon" style="color:var(--green)"><use href="#i-check"/></svg><span id="toast-text" class="ellipsis"></span></div>
         <div class="content compact" id="volume-ui" aria-hidden="true"><svg class="icon"><use id="volume-icon" href="#i-volume"/></svg><div class="bar"><i id="volume-bar"></i></div><span class="val" id="volume-val">0</span></div>
         <div class="content compact" id="focus-ui" aria-hidden="true"><svg class="icon"><use href="#i-hourglass"/></svg><span class="label" id="focus-label">Focus</span><span id="focus-timer">25:00</span><div id="focus-progress"><i id="focus-progress-bar"></i></div></div>
+        <div class="content compact" id="agent-ui" aria-hidden="true"><svg class="icon"><use href="#i-agent"/></svg><span class="ellipsis" id="agent-current"></span><div class="agent-dots" id="agent-dots"></div></div>
         <div class="content compact" id="media-ui" aria-hidden="true"><div class="art" id="media-art"><svg class="icon"><use href="#i-music"/></svg></div><span class="title ellipsis" id="media-title"></span><div class="eq" id="media-eq"><i></i><i></i><i></i><i></i></div></div>
 
         <!-- Expanded panels -->
@@ -102,10 +110,11 @@
                 </div>
                 <button class="tile" type="button" id="btn-notes" aria-label="Open quick note"><svg class="icon"><use href="#i-note"/></svg><span>Note</span></button>
                 <button class="tile" type="button" id="btn-focus" aria-label="Focus sessions"><svg class="icon"><use href="#i-hourglass"/></svg><span id="btn-focus-label">Focus</span></button>
+                <button class="tile" type="button" id="btn-agents" aria-label="Claude Code and Codex"><svg class="icon"><use href="#i-agent"/></svg><span>Agents</span></button>
             </div>
         </div>
         <div class="content" id="notes-ui">
-            <div class="notes-header"><span>Quick note</span><span class="save-indicator" id="save-msg">Saved</span></div>
+            <div class="notes-header pywebview-drag-region"><span>Quick note</span><span class="save-indicator" id="save-msg">Saved</span></div>
             <textarea id="notes-area" placeholder="Type something…" aria-label="Quick note"></textarea>
         </div>
         <div class="content" id="music-ui">
@@ -134,11 +143,34 @@
             </div>
         </div>
         <div class="content" id="chat-ui">
-            <div class="chat-head"><span class="cmd-lumi" aria-hidden="true"></span><b>Lumi</b><button class="chat-close" type="button" id="chat-close" aria-label="Close chat" title="Close (Esc)"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+            <div class="chat-head pywebview-drag-region"><span class="cmd-lumi" aria-hidden="true"></span><b>Lumi</b><button class="chat-close" type="button" id="chat-close" aria-label="Close chat" title="Close (Esc)"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
             <div class="chat-log" id="chat-log" role="log" aria-live="polite"></div>
             <form class="chat-form" id="chat-form">
                 <input id="chat-input" type="text" placeholder="Ask Lumi, or ask Lumi to do something…" aria-label="Message to Lumi" autocomplete="off" spellcheck="true">
                 <button type="submit" class="chat-send" aria-label="Send"><svg class="icon"><use href="#i-send"/></svg></button>
+            </form>
+        </div>
+        <div class="content" id="agents-ui">
+            <div class="chat-head pywebview-drag-region"><svg class="icon ag-head-icon" aria-hidden="true"><use href="#i-agent"/></svg><b>Agents</b>
+                <div class="ag-tabs" id="ag-tabs" role="tablist" aria-label="Sessions"></div>
+                <button class="chat-close" type="button" id="ag-close" aria-label="Close" title="Close (Esc)"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+            <div class="ag-session" id="ag-session">
+                <div class="ag-meta"><span class="ag-title ellipsis" id="ag-title"></span><span class="ag-sub" id="ag-sub"></span><button type="button" class="ag-stop" id="ag-stop">Stop</button></div>
+                <ol class="ag-nodes" id="ag-nodes" aria-live="polite"></ol>
+            </div>
+            <div class="chat-empty" id="ag-empty">Give Claude Code or Codex a task below. Sessions you run yourself show up here too.</div>
+            <form class="ag-form" id="ag-form">
+                <div class="ag-options">
+                    <div class="ag-seg" role="radiogroup" aria-label="Agent" id="ag-pick">
+                        <button type="button" role="radio" data-agent="claude">Claude Code</button><button type="button" role="radio" data-agent="codex">Codex</button>
+                    </div>
+                    <button type="button" class="ag-chip" id="ag-mode" aria-label="What the agent may do"></button>
+                    <button type="button" class="ag-chip ag-folder" id="ag-folder" title="Choose the folder the agent works in"><svg class="icon"><use href="#i-folder"/></svg><span class="ellipsis" id="ag-folder-name">Choose folder</span></button>
+                </div>
+                <div class="chat-form">
+                    <input id="ag-input" type="text" placeholder="What should it do?" aria-label="Task for the agent" autocomplete="off" spellcheck="true">
+                    <button type="submit" class="chat-send" id="ag-run" aria-label="Run"><svg class="icon"><use href="#i-send"/></svg></button>
+                </div>
             </form>
         </div>
         <div class="content" id="menu-ui">
