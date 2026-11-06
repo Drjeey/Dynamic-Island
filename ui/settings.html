@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Lumi Island settings</title>
     <link rel="stylesheet" href="settings.css">
+    <link rel="stylesheet" href="lumi-skins.css">
 </head>
 <body>
     <nav class="rail" aria-label="Settings sections">
@@ -65,7 +66,11 @@
                         <option value="peek">Peek from under the island</option>
                         <option value="always">Always show in full</option>
                     </select></div>
-                <div class="row"><div class="label"><b>Colour</b><span>Lumi's body colour. Listening, speaking and focus still tint Lumi while they're happening.</span></div>
+                <div class="row skin-row"><div class="label"><b>Skin</b><span>Listening, speaking and focus still tint Lumi while they're happening</span></div>
+                    <div class="skins" role="radiogroup" aria-label="Lumi's skin" id="skins"></div></div>
+                <div class="row"><div class="label"><b>Dress up for the season</b><span>Pumpkin from 24 to 31 October, Santa hat from 18 to 26 December, party hat over New Year. Your skin comes back afterwards.</span></div>
+                    <label class="switch"><input type="checkbox" id="seasonal_skins"><span></span></label></div>
+                <div class="row" id="row-color"><div class="label"><b>Colour</b><span id="color-help">Lumi's body colour</span></div>
                     <div class="lumi-preview" aria-hidden="true"><span class="preview-blob" id="preview-blob"><i></i><i></i></span></div>
                     <div class="swatches" role="radiogroup" aria-label="Lumi's colour" id="swatches"></div></div>
                 <div class="row"><div class="label"><b>Celebrate milestones</b><span>A short spin and sparkles for 5 focus sessions in a day or a 7-day streak</span></div>
@@ -122,6 +127,7 @@
         </section>
     </main>
 
+    <script src="lumi-skins.js"></script>
     <script src="settings.js"></script>
 </body>
 </html>

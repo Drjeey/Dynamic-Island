@@ -7,6 +7,7 @@ import threading
 import time
 import winreg
 from ctypes import wintypes
+from datetime import date
 from pathlib import Path
 
 import webview
@@ -19,7 +20,7 @@ from .apps import AppIndex
 from .credentials import migrate_from_config
 from .focus import FocusManager
 from .config import (AUTO_START_NAME, ENTRY_SCRIPT, HIT_COLOR, MIN_HEIGHT, STORAGE_PATH, TRANSPARENT_KEY,
-                     LUMI_COLORS, WINDOW_TITLE, WINDOW_WIDTH, Config)
+                     LUMI_COLORS, SKINS, WINDOW_TITLE, WINDOW_WIDTH, Config, seasonal_skin)
 from .hotkey import GlobalHotkey
 from .media import MediaWatcher
 from .system import MONITORINFO, SystemHelpers, Volume, list_monitors
@@ -60,6 +61,7 @@ class IslandController:
         self._stats_watching = threading.Event()  # set while the dashboard is open
         self._hidden_until = 0
         self._previous_foreground = None
+        self._skin_sent = None  # the skin the page last heard about
         self._snap_timer = None
         self._shake = {'x': None, 'dir': 0, 'turns': [], 'quiet_until': 0.0}
         self.hotkey_error = None
@@ -114,11 +116,19 @@ class IslandController:
             safe_json = json.dumps({'state': state, 'data': data or {}})
             self.window.evaluate_js(f"window.updateState && window.updateState({safe_json})")
 
-    PREF_KEYS = ('motion', 'lumi_visible', 'lumi_idle', 'scroll_volume', 'hotkey', 'lumi_color', 'celebrations')
+    PREF_KEYS = ('motion', 'lumi_visible', 'lumi_idle', 'scroll_volume', 'hotkey', 'lumi_color', 'celebrations',
+                 'skin', 'seasonal_skins')
+
+    def active_skin(self):
+        """The skin Lumi wears today: a festive one when that's on and it's the season, otherwise the chosen one."""
+        festive = seasonal_skin(date.today()) if self.config.get('seasonal_skins') else None
+        chosen = self.config.get('skin')
+        return festive or (chosen if chosen in SKINS else 'classic')
 
     def prefs(self):
         values = {k: self.config.get(k) for k in self.PREF_KEYS}
-        values['lumi_hex'] = LUMI_COLORS.get(values['lumi_color'], LUMI_COLORS['cloud'])
+        values['skin'] = self._skin_sent = self.active_skin()
+        values['lumi_hex'] = SKINS[values['skin']]['color'] or LUMI_COLORS.get(values['lumi_color'], LUMI_COLORS['cloud'])
         return values
 
     # --- milestones and the weekly summary ---
@@ -154,6 +164,7 @@ class IslandController:
         if key == 'anchor' and value not in ('top_center', 'free'): return 'Unknown position.'
         if key == 'motion' and value not in ('system', 'full', 'subtle', 'off', 'reduced'): return 'Unknown motion setting.'
         if key == 'lumi_color' and value not in LUMI_COLORS: return 'Unknown colour.'
+        if key == 'skin' and value not in SKINS: return 'Unknown skin.'
         if key == 'lumi_idle' and value not in ('peek', 'always'): return 'Unknown choice.'
         if key == 'voice_mode' and value not in ('standard', 'live'): return 'Unknown voice mode.'
         if key == 'ai_provider' and value not in PROVIDERS: return 'Unknown provider.'
@@ -333,6 +344,8 @@ class IslandController:
             tick += 1
             if tick % 5 == 0 and not hidden:
                 self._snap()
+            if tick % 60 == 0 and self.active_skin() != self._skin_sent:  # a festive date began or ended while running
+                self.push('prefs', self.prefs())
             time.sleep(1)
 
     # --- position and size ---

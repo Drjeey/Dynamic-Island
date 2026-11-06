@@ -31,9 +31,10 @@ let values = {}, providers = {}, keyInfo = {};
 function load() {
     api().get().then(res => {
         ({ values, providers, keys: keyInfo } = res);
-        const { monitors, hotkey_error, colors } = res;
+        const { monitors, hotkey_error, colors, skins } = res;
         for (const key of TOGGLES) $(key).checked = !!values[key];
         renderSwatches(colors, values.lumi_color);
+        renderSkins(skins, colors);
         document.querySelectorAll('input[name=anchor]').forEach(r => { r.checked = r.value === values.anchor; });
         $('monitor').innerHTML = monitors.map((m, i) => `<option value="${i}">${m}</option>`).join('');
         $('monitor').value = String(Math.min(values.monitor, monitors.length - 1));
@@ -53,7 +54,7 @@ function load() {
     });
 }
 
-const TOGGLES = ['auto_start', 'hide_in_fullscreen', 'scroll_volume', 'lumi_visible', 'celebrations', 'weekly_summary', 'agent_watch'];
+const TOGGLES = ['auto_start', 'hide_in_fullscreen', 'scroll_volume', 'lumi_visible', 'celebrations', 'weekly_summary', 'agent_watch', 'seasonal_skins'];
 const COLOR_NAMES = { cloud: 'Cloud', peach: 'Peach', mint: 'Mint', sky: 'Sky', lilac: 'Lilac', butter: 'Butter' };
 
 // Lumi's colour: a swatch per preset, with a small live preview of Lumi on the island's black
@@ -63,8 +64,36 @@ function renderSwatches(colors, current) {
     $('preview-blob').style.background = colors[current] || colors.cloud;
     document.querySelectorAll('input[name=lumi_color]').forEach(r => r.addEventListener('change', () => {
         $('preview-blob').style.background = colors[r.value];
+        document.querySelector('[data-skin=classic] .skin-lumi')?.style.setProperty('--body', colors[r.value]);
         save('lumi_color', r.value);
     }));
+}
+
+// A tile for each skin, drawn with the same art as the island. Picking one brings Lumi out to show it off
+const SKIN_FACE = '<rect fill="#1C1C1E" class="eye-open" x="17" y="15" width="8" height="12" rx="4"/><rect fill="#1C1C1E" class="eye-open" x="35" y="15" width="8" height="12" rx="4"/>'
+    + '<circle fill="#FFF" class="eye-glint" cx="22.6" cy="17.6" r="1.4"/><circle fill="#FFF" class="eye-glint" cx="40.6" cy="17.6" r="1.4"/>';
+function renderSkins(skins, colors) {
+    $('skins').innerHTML = Object.entries(skins).map(([key, skin]) =>
+        `<label class="skin-tile" data-skin="${key}"><input type="radio" name="skin" value="${key}" aria-label="${skin.name}" ${key === values.skin ? 'checked' : ''}>`
+        + `<span class="skin-stage"><span class="skin-lumi lumi-shape" style="--body:${skin.color || colors[values.lumi_color] || colors.cloud}">`
+        + `<svg viewBox="0 0 60 50" aria-hidden="true">${LUMI_SKIN_ART[key] || ''}${SKIN_FACE}</svg></span></span>`
+        + `<span class="skin-name">${skin.name}</span></label>`).join('');
+    document.querySelectorAll('input[name=skin]').forEach(r => r.addEventListener('change', () => {
+        save('skin', r.value).then(res => {
+            if (!res.ok) return;
+            values.skin = r.value;
+            syncColorRow();
+            api().preview('happy');
+        });
+    }));
+    syncColorRow();
+}
+// The colour swatches paint only the Classic skin; the others bring their own colours
+function syncColorRow() {
+    const classic = values.skin === 'classic';
+    $('row-color').classList.toggle('disabled', !classic);
+    $('color-help').textContent = classic ? "Lumi's body colour" : 'The Classic skin only. This skin has its own colours.';
+    document.querySelectorAll('input[name=lumi_color]').forEach(r => { r.disabled = !classic; });
 }
 
 // The rows below the provider follow the chosen provider: its key, its model, and (for "Other") its server

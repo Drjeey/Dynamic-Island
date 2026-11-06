@@ -34,7 +34,9 @@ DEFAULT_CONFIG = {
     "motion": "system",                # "system" follows Windows; or "full" / "subtle" / "off"
     "lumi_visible": True,
     "lumi_idle": "peek",               # "peek": tucked under the island until Lumi has something to say; "always"
-    "lumi_color": "cloud",             # one of LUMI_COLORS
+    "lumi_color": "cloud",             # one of LUMI_COLORS; the Classic skin's colour
+    "skin": "classic",                 # one of SKINS
+    "seasonal_skins": False,           # dress up for Halloween, Christmas and New Year, then go back to "skin"
     "celebrations": True,              # a short moment for focus milestones
     "weekly_summary": True,            # Lumi offers last week's focus recap once a week
     "last_summary_week": "",
@@ -71,11 +73,30 @@ EDITABLE = {
     'anchor': str, 'monitor': int, 'auto_start': bool, 'hide_in_fullscreen': bool, 'scroll_volume': bool,
     'motion': str, 'lumi_visible': bool, 'hotkey': str, 'voice_mode': str, 'live_model': str,
     'ai_provider': str, 'gemini_model': str, 'gemini_backup_model': str, 'claude_model': str, 'openai_model': str, 'custom_model': str, 'custom_url': str,
-    'lumi_color': str, 'celebrations': bool, 'weekly_summary': bool, 'lumi_idle': str, 'agent_watch': bool,
+    'lumi_color': str, 'skin': str, 'seasonal_skins': bool, 'celebrations': bool, 'weekly_summary': bool, 'lumi_idle': str,
+    'agent_watch': bool,
 }
 
 # Lumi's colour presets (soft, light tints so the dark eyes stay readable)
 LUMI_COLORS = {'cloud': '#F2F2F7', 'peach': '#FFD9C4', 'mint': '#C9F0DA', 'sky': '#CFE2FF', 'lilac': '#E2D6FF', 'butter': '#FFF0B8'}
+
+# Lumi's skins, in the order Settings shows them: name and body colour (light enough for the dark eyes).
+# Classic uses LUMI_COLORS. The drawings are in ui/lumi-skins.js and the shapes in ui/lumi-skins.css.
+SKINS = {
+    'classic': {'name': 'Classic', 'color': None},
+    'cat': {'name': 'Cat', 'color': '#F4B183'}, 'bunny': {'name': 'Bunny', 'color': '#F1ECF6'}, 'bear': {'name': 'Bear', 'color': '#CDA782'},
+    'robot': {'name': 'Robot', 'color': '#BFD0DE'}, 'pixel': {'name': 'Pixel', 'color': '#A5E887'}, 'hologram': {'name': 'Hologram', 'color': '#7FE9E2'},
+    'cloud': {'name': 'Cloud', 'color': '#F5F9FF'}, 'slime': {'name': 'Slime', 'color': '#9BE36B'}, 'sprout': {'name': 'Sprout', 'color': '#EADBB8'},
+    'santa': {'name': 'Santa hat', 'color': '#FBEFE6'}, 'pumpkin': {'name': 'Pumpkin', 'color': '#F6A23F'}, 'party': {'name': 'Party', 'color': '#FFD7E8'},
+}
+
+
+def seasonal_skin(day):
+    """The skin for a festive date, or None."""
+    if day.month == 10 and day.day >= 24: return 'pumpkin'
+    if day.month == 12 and 18 <= day.day <= 26: return 'santa'
+    if (day.month, day.day) in ((12, 31), (1, 1)): return 'party'
+    return None
 
 
 class Config(dict):

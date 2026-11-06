@@ -13,6 +13,7 @@ The roadmap from the product audit, and a record of each phase as it's done. Ref
 | F | Fixes from the island design critique (Impeccable, 25/40) | Done, 31 Oct 2026 |
 | G | More feelings and play: new emotions, interactions, dancing, and Try a reaction in Settings | Done, 31 Oct 2026 |
 | H | Claude Code and Codex on the island: run them, follow your own sessions as node states, and Lumi's coding look | Done, 1 Nov 2026 |
+| I | Skins: twelve full characters for Lumi, a picker in Settings, and seasonal dress-up | Done, 6 Nov 2026 |
 
 ---
 
@@ -567,3 +568,32 @@ A functional test of the whole app found 1 critical and 7 high bugs. All eight a
 - **One check failed once:** in one full run the Agents panel stayed open. It closed in the other full run and 6 out of 6 repeats, including right after Settings. The repeats show the real cursor crossing the island at times, and a cursor resting on the panel keeps it open on purpose. That's the likely cause, but it isn't proven.
 
 **Not tested yet:** dragging and selecting text with a real mouse; a successful Claude Code run (the account still has no credit); the folder picker. Voice, multiple displays and hiding in full-screen apps weren't part of this test.
+
+## Phase I: Skins (done, 6 Nov 2026)
+
+You chose full characters (shape, details and accessories, not just a hat) in all four themes. Each is drawn in code, so it stays sharp and needs no image files.
+
+| Theme | Skins |
+|---|---|
+| Original | Classic (the only skin that uses the Colour setting) |
+| Animals | Cat, Bunny, Bear |
+| Tech | Robot, Pixel, Hologram |
+| Nature | Cloud, Slime, Sprout |
+| Seasonal | Santa hat, Pumpkin, Party |
+
+| Area | What changed |
+|---|---|
+| Moods | Moods used to repaint Lumi's body directly. They now set one variable, `--body`, which the body and the ears, tails and drips all use, so everything tints together and returns to the skin's colour afterwards |
+| Drawings | `ui/lumi-skins.js` holds each skin's art, used by both the island and Settings, so the picker shows exactly what you'll get. `ui/lumi-skins.css` holds the shapes. Names and colours are in `SKINS` in `lumi/config.py` |
+| Drawing rules | Art keeps clear of the eyes, the glasses and the "!", and fits the 15px under the island. Nothing outside the body is see-through, because the window's transparency is a colour key and soft edges would fringe. Details on the body (pumpkin ribs, cat stripes) are a shade of the current colour, so they suit every tint |
+| Settings | Lumi and voice → **Skin**: a tile for each skin. Picking one applies at once, and Lumi comes out for a happy wiggle so you can see it even while peeking. With any skin but Classic, the Colour row is disabled and says why. The small Lumis in the command bar and Agents panel take the skin's colour |
+| Seasonal | **Dress up for the season** (off by default): Pumpkin 24–31 October, Santa hat 18–26 December, Party 31 December–1 January. Your own skin comes back afterwards, and the change happens within a minute even if Lumi is left running |
+
+**How it was tested** (a scratch copy of the app; your `config.json` wasn't touched, and with no `skin` saved you start on Classic):
+- **Every skin in 13 moods, on one contact sheet, checked by eye.** This caught two things, both fixed: fixed-colour details clashed with mood tints (orange pumpkin ribs on blue), and the hologram's floor tilted with Lumi's head.
+- **The real app, driven over a local DevTools port:** ears tint with the body and the skin's colour returns; a mood change never removes the skin; picking a skin dresses Lumi at once and brings it out; the Colour row disables and explains itself; an unknown skin is refused; back to Classic restores your colour and removes the accessories; the seasonal switch saves and leaves today alone; a reload keeps the skin; no script errors.
+- **Real views:** peeking (ears and hats tuck behind the island), full view, the coding glasses, and a speech bubble.
+- **Python:** the first and last date of each season and the days either side; a seasonal skin overriding the chosen one; a bad saved skin falling back to Classic.
+- **Design detector:** nothing new to fix. The padding warnings are on older parts of the UI, and the stripes advisory is the hologram's scanlines, which are deliberate.
+
+**Not tested yet:** how the skins look on your own desktop, against your wallpaper (the sheet used a plain dark background); a festive date arriving in the real app (only the date logic was tested); the skin picker with a keyboard or screen reader.

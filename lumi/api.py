@@ -9,7 +9,7 @@ import webview
 
 from . import credentials, providers
 from .agents import AGENTS
-from .config import EDITABLE, LIVE_VOICE_NOTICE, LUMI_COLORS, NOTES_PATH, VOICE_NOTICE
+from .config import EDITABLE, LIVE_VOICE_NOTICE, LUMI_COLORS, NOTES_PATH, SKINS, VOICE_NOTICE
 from .providers import PROVIDERS
 from .system import SystemHelpers, Volume
 
@@ -253,7 +253,7 @@ class SettingsAPI:
         keys = {name: {'set': credentials.has_stored_key(name), 'from_env': credentials.key_from_environment(name),
                        'env': credentials.ENVIRONMENT.get(name)} for name in PROVIDERS}
         return {'values': values, 'monitors': c.monitor_names(), 'hotkey_error': c.hotkey_error, 'colors': LUMI_COLORS,
-                'providers': PROVIDERS, 'keys': keys}
+                'skins': SKINS, 'providers': PROVIDERS, 'keys': keys}
 
     def set(self, key, value):
         if key not in EDITABLE:

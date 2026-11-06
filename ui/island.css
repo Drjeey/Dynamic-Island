@@ -8,6 +8,7 @@
     --text: #F2F2F5;
     --text-2: #A3A3AD;
     --lumi: #F2F2F7;
+    --body: var(--lumi);  /* Lumi's colour right now: moods replace it */
     --eye: #1C1C1E;
     --blue: #4C8DFF;    /* listening / active */
     --blue-strong: #2E6BE0;  /* blue behind white text (4.9:1) */
@@ -351,12 +352,7 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .lumi-hidden #lumi-container { display: none; }
 #lumi-body {
     width: 100%; height: 100%;
-    background: var(--lumi);
-    border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%;
-    position: relative;
-    box-shadow: inset -2px -5px 10px rgba(0,0,0,0.1);
     animation: breathe 5s ease-in-out infinite;
-    transition: background 0.3s;
     transform-origin: 50% 100%;
 }
 /* Full intensity: Lumi floats gently as it breathes (moods with their own motion override this) */
@@ -441,7 +437,8 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 @keyframes sparkle { 0% { opacity: 0; transform: translate(0, 0) scale(0.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); } }
 
 /* Listening: blue, eyes a little wider, a ring pulsing outwards */
-.mood-listening #lumi-body { background: var(--blue); animation: pulse-listen 1.5s infinite; }
+.mood-listening { --body: var(--blue); }
+.mood-listening #lumi-body { animation: pulse-listen 1.5s infinite; }
 .mood-listening .eye-g { transform: scale(1.15); }
 /* Thinking: eyes glance up and to the side while Gemini answers */
 .mood-thinking #lumi-eyes { transform: translate(-2px, -3px) !important; }
@@ -454,7 +451,8 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .mood-waiting .eye-g { animation: slow-blink 3.5s ease-in-out infinite; }
 .mood-waiting #lumi-body { animation: sway 3.2s ease-in-out infinite; }
 /* Speaking: green, with a small mouth that moves */
-.mood-speaking #lumi-body { background: var(--green); animation: bounce-speak 0.4s ease-in-out infinite; }
+.mood-speaking { --body: var(--green); }
+.mood-speaking #lumi-body { animation: bounce-speak 0.4s ease-in-out infinite; }
 .mood-speaking #lumi-mouth { opacity: 1; animation: talk 0.28s ease-in-out infinite; }
 /* With real audio levels (levels.py) the ring follows your voice and the mouth follows Lumi's;
    without them (or with Animation off) the loops above play instead */
@@ -473,13 +471,14 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .mood-error .eye-g { transform: scaleY(0.45); }
 .mood-error #eye-r { transform: scaleY(0.45) translateY(-2px); }
 /* Music: violet, eyes closed in enjoyment, gently swaying */
-.mood-music #lumi-body { background: var(--violet); }
+.mood-music { --body: var(--violet); }
 .mood-music #lumi-face { animation: sway 2.4s ease-in-out infinite; }
 /* Focus and break: calm, half-closed eyes */
-.mood-focus #lumi-body { background: var(--amber); animation-duration: 8s; }
-.mood-focus { opacity: 0.75; }
+.mood-focus #lumi-body { animation-duration: 8s; }
+.mood-focus { --body: var(--amber); opacity: 0.75; }
 .mood-focus .eye-g { transform: scaleY(0.55); }
-.mood-break #lumi-body { background: var(--green); animation-duration: 6s; }
+.mood-break { --body: var(--green); }
+.mood-break #lumi-body { animation-duration: 6s; }
 /* Sleepy: after 10 minutes without you, eyes closed, slow breathing, floating z's */
 .mood-sleepy #lumi-body { animation-duration: 8s; }
 .mood-sleepy .eye-open, .mood-sleepy .eye-glint { opacity: 0; }

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Lumi Island</title>
     <link rel="stylesheet" href="island.css">
+    <link rel="stylesheet" href="lumi-skins.css">
 </head>
 <body>
     <!-- Icons are bundled so they work offline -->
@@ -42,9 +43,10 @@
     </svg>
 
     <div id="lumi-container" class="mood-idle">
-        <div id="lumi-body" class="pywebview-drag-region" aria-hidden="true">
+        <div id="lumi-body" class="lumi-shape pywebview-drag-region" aria-hidden="true">
             <!-- Lumi's face: each expression shows a different set of these parts (see "LUMI'S FACE" in island.css) -->
             <svg id="lumi-face" viewBox="0 0 60 50">
+                <g id="lumi-skin"></g><!-- filled from lumi-skins.js -->
                 <g id="lumi-eyes">
                     <g class="eye-g" id="eye-l">
                         <rect class="eye-open" x="17" y="15" width="8" height="12" rx="4"/>
@@ -187,6 +189,7 @@
     </div>
 
     <script src="lumi-state.js"></script>
+    <script src="lumi-skins.js"></script>
     <script src="island.js"></script>
 </body>
 </html>

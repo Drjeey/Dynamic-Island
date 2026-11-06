@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 const dom = {
     island: $('island'), lumi: $('lumi-container'), lumiBody: $('lumi-body'), bubble: $('speech-bubble'),
-    eyes: $('lumi-eyes'), mic: $('mic-btn'), notesUi: $('notes-ui'),
+    eyes: $('lumi-eyes'), skin: $('lumi-skin'), mic: $('mic-btn'), notesUi: $('notes-ui'),
     ramRing: $('ram-ring'), batRing: $('bat-ring'), ramVal: $('ram-val'), ramLabel: $('ram-label'),
     batVal: $('bat-val'), batLabel: $('bat-label'), netIcon: $('net-icon'), netVal: $('net-val'),
     statusUi: $('status-ui'), statusIcon: $('status-icon'), statusText: $('status-text'),
@@ -382,8 +382,15 @@ function applyPrefs(p) {
     html.classList.toggle('lumi-float', intensity === 'full');
     document.body.classList.toggle('lumi-hidden', !prefs.lumi_visible);
     if (prefs.lumi_hex) document.documentElement.style.setProperty('--lumi', prefs.lumi_hex);
+    setSkin(prefs.skin || 'classic');
     syncPeek();
     trackHitAreas(400);
+}
+// The skin lives in a data attribute: the mood replaces Lumi's class names, and this must survive that
+function setSkin(name) {
+    if (dom.lumi.dataset.skin === name) return;
+    dom.lumi.dataset.skin = name;
+    dom.skin.innerHTML = LUMI_SKIN_ART[name] || '';
 }
 
 // --- STATE ENGINE ---
