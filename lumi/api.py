@@ -55,7 +55,18 @@ class IslandAPI:
     def init(self):
         c = self._ctrl
         return {'prefs': c.prefs(), 'onboarding': not c.config.get('onboarding_done'), 'media': c.media.state, 'agents': c.agents.state(),
-                'hotkey_error': c.hotkey_error, 'greeting': self._daily_greeting()}
+                'hotkey_error': c.hotkey_error, 'greeting': self._daily_greeting(), 'offer_sounds': self._offer_sounds()}
+
+    def _offer_sounds(self):
+        # Lumi asks once whether it may make sounds, never during the first-run tour; asking counts, answered or not
+        c = self._ctrl.config
+        if c.get('sounds_offered') or not c.get('onboarding_done'):
+            return False
+        c['sounds_offered'] = True
+        c.save()
+        return True
+
+    def answer_sounds(self, yes): self._ctrl.apply_setting('sounds', bool(yes))
 
     def _daily_greeting(self):
         # Lumi says hello once a day, the first time the island loads
@@ -64,6 +75,8 @@ class IslandAPI:
             return None
         self._ctrl.config['last_greeting'] = today.date().isoformat()
         self._ctrl.config.save()
+        if (today.month, today.day) == (12, 25) and self._ctrl.config.get('seasonal_skins'):
+            return 'Merry Christmas'  # the page gives this one its own moment
         return 'Good morning' if today.hour < 12 else 'Good afternoon' if today.hour < 18 else 'Good evening'
 
     def finish_onboarding(self):
@@ -238,6 +251,7 @@ PREVIEWS = {
     'listening': 'Listening', 'thinking': 'Thinking', 'checking': 'Checking', 'working': 'Working', 'replying': 'Replying',
     'speaking': 'Speaking', 'waiting': 'Waiting',
     'dance': 'Dancing', 'music': 'Music', 'focus': 'Focus', 'break': 'Break', 'sleepy': 'Sleepy', 'coding': 'Coding',
+    'snowfall': 'Snowfall', 'present': 'Present', 'jingle': 'Jingle', 'brrr': 'Brrr', 'merry': 'Merry Christmas',
 }
 
 

@@ -37,6 +37,9 @@ DEFAULT_CONFIG = {
     "lumi_color": "cloud",             # one of LUMI_COLORS; the Classic skin's colour
     "skin": "classic",                 # one of SKINS
     "seasonal_skins": False,           # dress up for Halloween, Christmas and New Year, then go back to "skin"
+    "sounds": False,                   # Lumi's sound effects (ui/lumi-sounds.js); off until you say yes
+    "sound_volume": 60,                # 0-100
+    "sounds_offered": False,           # Lumi asks once whether it may make sounds
     "celebrations": True,              # a short moment for focus milestones
     "weekly_summary": True,            # Lumi offers last week's focus recap once a week
     "last_summary_week": "",
@@ -73,7 +76,7 @@ EDITABLE = {
     'anchor': str, 'monitor': int, 'auto_start': bool, 'hide_in_fullscreen': bool, 'scroll_volume': bool,
     'motion': str, 'lumi_visible': bool, 'hotkey': str, 'voice_mode': str, 'live_model': str,
     'ai_provider': str, 'gemini_model': str, 'gemini_backup_model': str, 'claude_model': str, 'openai_model': str, 'custom_model': str, 'custom_url': str,
-    'lumi_color': str, 'skin': str, 'seasonal_skins': bool, 'celebrations': bool, 'weekly_summary': bool, 'lumi_idle': str,
+    'lumi_color': str, 'skin': str, 'seasonal_skins': bool, 'sounds': bool, 'sound_volume': int, 'celebrations': bool, 'weekly_summary': bool, 'lumi_idle': str,
     'agent_watch': bool,
 }
 
@@ -95,10 +98,15 @@ SKINS = {
 CHRISTMAS_SKINS = ('santa', 'reindeer', 'snowman', 'gingerbread', 'elf')  # one a day over Christmas, in turn
 
 
+def is_christmas(day):
+    """18 to 26 December: Christmas skins and Christmas moments, when seasonal dress-up is on."""
+    return day.month == 12 and 18 <= day.day <= 26
+
+
 def seasonal_skin(day):
     """The skin for a festive date, or None."""
     if day.month == 10 and day.day >= 24: return 'pumpkin'
-    if day.month == 12 and 18 <= day.day <= 26: return CHRISTMAS_SKINS[(day.day - 18) % len(CHRISTMAS_SKINS)]
+    if is_christmas(day): return CHRISTMAS_SKINS[(day.day - 18) % len(CHRISTMAS_SKINS)]
     if (day.month, day.day) in ((12, 31), (1, 1)): return 'party'
     return None
 

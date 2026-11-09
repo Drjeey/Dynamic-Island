@@ -35,6 +35,8 @@ function load() {
         for (const key of TOGGLES) $(key).checked = !!values[key];
         renderSwatches(colors, values.lumi_color);
         renderSkins(skins, colors);
+        $('sound_volume').value = values.sound_volume ?? 60;
+        syncSoundRow();
         document.querySelectorAll('input[name=anchor]').forEach(r => { r.checked = r.value === values.anchor; });
         $('monitor').innerHTML = monitors.map((m, i) => `<option value="${i}">${m}</option>`).join('');
         $('monitor').value = String(Math.min(values.monitor, monitors.length - 1));
@@ -54,7 +56,7 @@ function load() {
     });
 }
 
-const TOGGLES = ['auto_start', 'hide_in_fullscreen', 'scroll_volume', 'lumi_visible', 'celebrations', 'weekly_summary', 'agent_watch', 'seasonal_skins'];
+const TOGGLES = ['auto_start', 'hide_in_fullscreen', 'scroll_volume', 'lumi_visible', 'celebrations', 'weekly_summary', 'agent_watch', 'seasonal_skins', 'sounds'];
 const COLOR_NAMES = { cloud: 'Cloud', peach: 'Peach', mint: 'Mint', sky: 'Sky', lilac: 'Lilac', butter: 'Butter' };
 
 // Lumi's colour: a swatch per preset, with a small live preview of Lumi on the island's black
@@ -143,6 +145,15 @@ $('monitor').addEventListener('change', () => save('monitor', parseInt($('monito
 $('motion').addEventListener('change', () => save('motion', $('motion').value));
 $('lumi_idle').addEventListener('change', () => save('lumi_idle', $('lumi_idle').value));
 $('lumi_visible').addEventListener('change', () => $('row-lumi-idle').classList.toggle('disabled', !$('lumi_visible').checked));
+// The volume only matters with sounds on; letting go of the slider plays a jingle at the new volume
+function syncSoundRow() {
+    $('row-volume').classList.toggle('disabled', !$('sounds').checked);
+    $('sound_volume').disabled = !$('sounds').checked;
+}
+$('sounds').addEventListener('change', syncSoundRow);
+$('sound_volume').addEventListener('change', () => {
+    save('sound_volume', parseInt($('sound_volume').value, 10)).then(res => { if (res.ok) api().preview('jingle'); });
+});
 
 // Text fields save on their Save button (or Enter)
 $('form-hotkey').addEventListener('submit', e => { e.preventDefault(); save('hotkey', $('hotkey').value, $('msg-hotkey')).then(r => { if (r.ok) load(); }); });

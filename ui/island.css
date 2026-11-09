@@ -594,6 +594,66 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 #lumi-sparkles i:nth-child(1) { --dx: -38px; --dy: -22px; } #lumi-sparkles i:nth-child(2) { --dx: 36px; --dy: -26px; }
 #lumi-sparkles i:nth-child(3) { --dx: -44px; --dy: 8px; }   #lumi-sparkles i:nth-child(4) { --dx: 46px; --dy: 4px; }
 #lumi-sparkles i:nth-child(5) { --dx: -22px; --dy: -38px; } #lumi-sparkles i:nth-child(6) { --dx: 20px; --dy: -40px; }
+/* --- CHRISTMAS --- */
+/* Moments that only happen 18-26 December with seasonal dress-up on (and in Settings' try-outs). Everything here is solid
+   and leaves by shrinking, not fading: the window's transparency is a colour key, so half-see-through pixels would grey */
+@keyframes snow-fall { 0% { transform: translate(0, 0) scale(0); } 12% { transform: translate(1px, 6px) scale(1); }
+    50% { transform: translate(-3px, 40px) scale(1); } 88% { transform: translate(2px, 70px) scale(1); } 100% { transform: translate(0, 76px) scale(0); } }
+@keyframes gift-pop { 0% { transform: scale(0); } 14%, 84% { transform: scale(1); } 100% { transform: scale(0); } }
+@keyframes lid-off { 0%, 38% { transform: none; } 52%, 100% { transform: translate(3px, -9px) rotate(-28deg); } }
+@keyframes bell-ring { 0% { transform: scale(0); } 10% { transform: scale(1) rotate(0); } 22% { transform: rotate(26deg); } 36% { transform: rotate(-24deg); }
+    50% { transform: rotate(18deg); } 64% { transform: rotate(-12deg); } 78% { transform: rotate(0) scale(1); } 100% { transform: scale(0); } }
+@keyframes breath-puff { 0% { transform: translate(0, 0) scale(0); } 30% { transform: translate(5px, -1px) scale(1); } 100% { transform: translate(20px, -7px) scale(0); } }
+@keyframes shiver { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1.3px); } 75% { transform: translateX(1.3px); } }
+#lumi-snow { position: absolute; inset: -32px -36px -6px; pointer-events: none; }
+/* The pale blue edge keeps flakes visible against light skins (Snowman, Classic) and light wallpapers */
+#lumi-snow i { position: absolute; top: 0; width: 5px; height: 5px; box-sizing: border-box; border-radius: 50%; background: #FFFFFF; border: 1px solid #B9CDE6; transform: scale(0); }
+#lumi-snow i:nth-child(1) { left: 6%; } #lumi-snow i:nth-child(2) { left: 22%; width: 4px; height: 4px; } #lumi-snow i:nth-child(3) { left: 37%; }
+#lumi-snow i:nth-child(4) { left: 52%; width: 4px; height: 4px; } #lumi-snow i:nth-child(5) { left: 66%; } #lumi-snow i:nth-child(6) { left: 80%; width: 4px; height: 4px; }
+#lumi-snow i:nth-child(7) { left: 93%; }
+#lumi-gift { position: absolute; left: -27px; bottom: -2px; width: 22px; height: 22px; overflow: visible; pointer-events: none; transform: scale(0); transform-origin: 50% 100%; }
+#lumi-gift .gift-lid { transform-box: fill-box; transform-origin: 0 100%; }
+#lumi-bell { position: absolute; right: -15px; top: -13px; width: 13px; height: 15px; pointer-events: none; transform: scale(0); transform-origin: 50% 0; }
+#lumi-breath { position: absolute; left: 38px; top: 29px; width: 1px; height: 1px; pointer-events: none; }
+#lumi-breath i { position: absolute; left: 0; top: 0; border-radius: 50%; background: #FFFFFF; transform: scale(0); }
+#lumi-breath i:nth-child(1) { width: 5px; height: 5px; } #lumi-breath i:nth-child(2) { width: 7px; height: 7px; } #lumi-breath i:nth-child(3) { width: 9px; height: 9px; }
+/* Snowfall: now and then over Christmas; Lumi looks up and sways as the snow drifts past */
+.mood-snowfall #lumi-snow i, .mood-merry #lumi-snow i { animation: snow-fall var(--snow-time, 2.6s) linear 1; }
+#lumi-snow i:nth-child(2) { animation-delay: 0.5s !important; } #lumi-snow i:nth-child(3) { animation-delay: 0.15s !important; }
+#lumi-snow i:nth-child(4) { animation-delay: 0.75s !important; } #lumi-snow i:nth-child(5) { animation-delay: 0.3s !important; }
+#lumi-snow i:nth-child(6) { animation-delay: 0.6s !important; } #lumi-snow i:nth-child(7) { animation-delay: 0.05s !important; }
+.mood-snowfall #lumi-eyes { transform: translate(0, -3px) !important; }
+.mood-snowfall .eye-g { transform: scale(1.1); }
+.mood-snowfall #lumi-face { animation: sway 1.6s ease-in-out 2; }
+/* Present: a focus session finished over Christmas; a gift pops up, the lid flies off, and out come sparkles */
+.mood-present #lumi-gift { animation: gift-pop 1.8s var(--spring) 1; }
+.mood-present #lumi-gift .gift-lid { animation: lid-off 1.8s ease-out 1; }
+.mood-present #lumi-eyes { transform: translate(-3px, 1px) !important; }
+.mood-present .eye-g { transform: scale(1.15); }
+.mood-present #lumi-cheeks ellipse { opacity: 0.6; }
+.mood-present #lumi-body { animation: hop 0.6s ease-out 0.75s 1; }
+.mood-present #lumi-sparkles i { animation: sparkle 0.9s ease-out 0.75s 1; }
+/* Jingle: petting or double-clicking Lumi over Christmas; a bell swings while Lumi wiggles */
+.mood-jingle #lumi-bell { animation: bell-ring 1.4s ease-in-out 1; }
+.mood-jingle .eye-open, .mood-jingle .eye-glint { opacity: 0; }
+.mood-jingle .eye-happy { opacity: 1; }
+.mood-jingle #lumi-cheeks ellipse { opacity: 0.6; }
+.mood-jingle #lumi-body { animation: giggle 0.55s ease-in-out 2; }
+/* Brrr: back at the PC over Christmas; a shiver and a puff of frosty breath, then the usual welcome */
+.mood-brrr #lumi-body { animation: shiver 0.09s linear 12; }
+.mood-brrr .eye-g { transform: scaleY(0.45); }
+.mood-brrr #lumi-mouth { opacity: 1; transform: scale(0.5, 0.35); }
+.mood-brrr #lumi-breath i { animation: breath-puff 0.9s ease-out 1; }
+#lumi-breath i:nth-child(2) { animation-delay: 0.2s !important; } #lumi-breath i:nth-child(3) { animation-delay: 0.4s !important; }
+/* Merry Christmas: the first hello on 25 December; two hops, red and green sparkles, and a flurry of snow */
+.mood-merry { --snow-time: 1.6s; }
+.mood-merry .eye-open, .mood-merry .eye-glint { opacity: 0; }
+.mood-merry .eye-happy { opacity: 1; }
+.mood-merry #lumi-cheeks ellipse { opacity: 0.7; }
+.mood-merry #lumi-body { animation: hop 0.6s ease-out 2; }
+.mood-merry #lumi-sparkles i { animation: sparkle 0.9s ease-out 1; background: #E0453A; }
+.mood-merry #lumi-sparkles i:nth-child(even) { background: #3FAE5A; }
+
 /* A press on Lumi: a quick squash and spring back */
 @keyframes boop { 0% { transform: scale(1, 1); } 35% { transform: scale(1.08, 0.88); } 100% { transform: scale(1, 1); } }
 #lumi-body.boop { animation: boop 0.26s var(--spring) 1 !important; }

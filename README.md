@@ -32,7 +32,8 @@ setx GEMINI_API_KEY "your-key-here"
 - **Scroll** on the island to change the volume; the level shows in the island.
 - **Hover** over Lumi and click the mic to talk. The first click explains where your voice is sent; click again to start. In Settings you can switch to **Live (preview)** voice, a flowing conversation you can interrupt (headphones recommended).
 - **Drag** the island to another display; it snaps to the top centre. Choose "Free" in Settings to leave it where you drop it.
-- **Dress Lumi up** in Settings → Lumi and voice → Skin: cat, bunny, bear, robot, pixel, hologram, cloud, slime, sprout, pumpkin, party, or for Christmas a Santa hat, reindeer, snowman, gingerbread or elf. Turn on **Dress up for the season** to have Lumi change by itself for Halloween, Christmas (a different skin each day) and New Year.
+- **Dress Lumi up** in Settings → Lumi and voice → Skin: cat, bunny, bear, robot, pixel, hologram, cloud, slime, sprout, pumpkin, party, or for Christmas a Santa hat, reindeer, snowman, gingerbread or elf. Turn on **Dress up for the season** to have Lumi change by itself for Halloween, Christmas (a different skin each day, plus snowfall, presents and a few other festive moments) and New Year.
+- **Sounds** are off until you say yes (Lumi asks once). Turn them on or set the volume in Settings → Lumi and voice. Lumi stays quiet while it's listening or speaking, and while a full-screen app is in front.
 - Panels close when the mouse leaves them, or with **Esc**. Use **Tab** to move between buttons.
 - The island hides itself while a full-screen app (video, game, slideshow) is in front.
 

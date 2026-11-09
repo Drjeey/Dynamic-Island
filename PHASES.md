@@ -618,3 +618,46 @@ You chose four more, and a different Christmas skin each day.
 - **One false alarm:** a check said picking Gingerbread didn't change Lumi. My first test run had already picked it, so the second click landed on the tile that was already chosen, where correctly nothing happens.
 
 **Not tested yet:** a Christmas date arriving in the real app (only the date logic was tested).
+
+### Christmas reactions (9 Nov 2026)
+
+You asked for all five. They happen only from 18 to 26 December with **Dress up for the season** on, and some replace a reaction Lumi already had, so they add no extra noise. All five are also in Settings → Try a reaction → **Christmas**.
+
+| Reaction | What you see | When |
+|---|---|---|
+| Snowfall | Snowflakes drift down past Lumi, who looks up and sways | Every 4–8 minutes while Lumi is quiet and you're at the PC (reusing the 20 s limit on small reactions) |
+| Present | A gift pops up beside Lumi, the lid flies off, sparkles burst and Lumi hops | Instead of the hop when a focus session finishes |
+| Jingle | A gold bell swings above Lumi while it wiggles with happy eyes | Instead of giggle (double-click) and happy (petting) |
+| Brrr | A shiver, squeezed eyes, a small "o" and three puffs of frosty breath | Coming back after being away, before the usual welcome |
+| Merry Christmas | Two hops, red and green sparkles, and a flurry of snow | Lumi's first hello on 25 December, in place of "Good morning" |
+
+| Area | What changed |
+|---|---|
+| Python | `is_christmas()` in `lumi/config.py`. The page's preferences now carry `christmas`, and the once-a-minute check sends them again when Christmas begins or ends, even when the skin stays the same (if you'd already chosen the Santa hat). The greeting on 25 December is "Merry Christmas" |
+| Page | New elements beside Lumi: snow, gift, bell and breath. Each is solid and leaves by shrinking, not fading, because half-see-through pixels would show grey through the window's colour key. Snowflakes have a pale blue edge so they show on light skins and wallpapers. With Animation off nothing appears, and Lumi keeps its face |
+| No sound | Jingle is visual only for now; sound effects are the next step |
+
+**How it was tested:**
+- **Python:** 18 to 26 December only; the flag on only with the seasonal switch on; the watcher noticing Christmas starting with an unchanged skin; "Merry Christmas" on the 25th only with the switch on, and the usual greeting otherwise.
+- **The real app (a scratch copy):** each reaction played from its Settings chip and captured at four moments; with Christmas off, focus finishing, double-click, coming back and petting still give the old reactions, and with it on the new ones; the welcome follows Brrr; gift, bell, snow and breath are hidden afterwards, and stay hidden with Animation off; no script errors.
+- **Seen and fixed:** the snowflakes nearly vanished against a light Lumi, so they're now a little bigger with a pale blue edge, checked again on the Snowman and on Classic.
+
+**Not tested yet:** the 4–8 minute snowfall timer running in the real app (its condition was reviewed, and the reaction itself tested); the reactions on your own wallpaper.
+
+## Sound effects, phase 1: Christmas (9 Nov 2026)
+
+**Decisions:** sounds are made in code, not from files, because the bundled sound files in `video/` have no recorded licence for shipping in an app. Sounds are **off by default**, and Lumi asks once (your choice). Phase 2 (everyday moments: focus done, break over, milestones, agents finishing, small cartoon sounds) is next.
+
+| Area | What changed |
+|---|---|
+| Engine | New `ui/lumi-sounds.js`: each sound is a short recipe of tones and filtered noise, all in C major, timed to its animation. A reaction plays its sound when it starts (`onReaction` in `lumi-state.js`), so a queued reaction's sound waits for its turn |
+| Sounds | Jingle (sleigh bells as the bell swings), Present (a pop as the lid flies off, then a rising sparkle), Snowfall (three far-off chimes, the softest), Brrr (teeth chattering through the shiver), Merry Christmas (four bright notes over the hops) |
+| Quiet rules | Silent when Sounds is off; while Lumi listens or speaks, so the mic never hears it; while the island is out of sight for a full-screen app or Hide 1 hour (Python now tells the page, `visibility`); and at most one sound every 1.5 s |
+| Asking once | Six seconds after start, never during the first-run tour, Lumi asks "Want me to make little sounds?" Showing it counts as asking (`sounds_offered`), answered or not. "Yes, please" turns sounds on and plays a jingle |
+| Settings | Lumi and voice → **Sounds** (says what's covered and when it stays quiet) and **Sound volume** (0–100, default 60, disabled while sounds are off). Letting go of the slider plays a jingle at the new volume. With sounds on, the Christmas try-outs play their sounds too |
+
+**How it was tested:**
+- **Each sound rendered to a file in the real app and measured:** none clips at full volume; all are under 2.5 s. The first pass was uneven (the present's pop 6 dB louder than the jingle, Brrr barely audible), so they were rebalanced. Now Jingle, Present, Brrr and Merry Christmas peak at −12 to −13 dBFS, and Snowfall at −22 dBFS on purpose. The five sounds were exported at the default volume for you to judge by ear.
+- **Python:** the offer once, and never during the tour; volume outside 0–100 refused; the answer turning sounds on and off; the preferences carry both settings.
+- **The real app (scratch copy, sound output spied on, so nothing played):** the offer card appears by itself; off is silent; on plays at the chosen volume; reactions without a sound stay silent; silent while listening, speaking or hidden; a second sound within 1.5 s is skipped; Hide 1 hour really tells the page, and again when it's back; the answer turns sounds on; the Settings switch, slider (saves, then jingles at the new volume), refusal of 140 and disabling all work; no script errors (after fixing one: a test's offline renderer refused to be "resumed").
+- **Not tested yet:** hearing the sounds through your speakers in the app (they were checked as files); the full-screen case for real (Hide 1 hour uses the same message); Windows' own volume and mute (sounds go through the normal Windows mixer).

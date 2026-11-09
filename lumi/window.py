@@ -20,7 +20,7 @@ from .apps import AppIndex
 from .credentials import migrate_from_config
 from .focus import FocusManager
 from .config import (AUTO_START_NAME, ENTRY_SCRIPT, HIT_COLOR, MIN_HEIGHT, STORAGE_PATH, TRANSPARENT_KEY,
-                     LUMI_COLORS, SKINS, WINDOW_TITLE, WINDOW_WIDTH, Config, seasonal_skin)
+                     LUMI_COLORS, SKINS, WINDOW_TITLE, WINDOW_WIDTH, Config, is_christmas, seasonal_skin)
 from .hotkey import GlobalHotkey
 from .media import MediaWatcher
 from .system import MONITORINFO, SystemHelpers, Volume, list_monitors
@@ -61,7 +61,7 @@ class IslandController:
         self._stats_watching = threading.Event()  # set while the dashboard is open
         self._hidden_until = 0
         self._previous_foreground = None
-        self._skin_sent = None  # the skin the page last heard about
+        self._season_sent = None  # the skin and Christmas flag the page last heard about
         self._snap_timer = None
         self._shake = {'x': None, 'dir': 0, 'turns': [], 'quiet_until': 0.0}
         self.hotkey_error = None
@@ -117,7 +117,7 @@ class IslandController:
             self.window.evaluate_js(f"window.updateState && window.updateState({safe_json})")
 
     PREF_KEYS = ('motion', 'lumi_visible', 'lumi_idle', 'scroll_volume', 'hotkey', 'lumi_color', 'celebrations',
-                 'skin', 'seasonal_skins')
+                 'skin', 'seasonal_skins', 'sounds', 'sound_volume')
 
     def active_skin(self):
         """The skin Lumi wears today: a festive one when that's on and it's the season, otherwise the chosen one."""
@@ -125,9 +125,13 @@ class IslandController:
         chosen = self.config.get('skin')
         return festive or (chosen if chosen in SKINS else 'classic')
 
+    def season(self):
+        """What the page needs to know about festive dates: today's skin, and whether Christmas moments are on."""
+        return self.active_skin(), bool(self.config.get('seasonal_skins')) and is_christmas(date.today())
+
     def prefs(self):
         values = {k: self.config.get(k) for k in self.PREF_KEYS}
-        values['skin'] = self._skin_sent = self.active_skin()
+        self._season_sent = values['skin'], values['christmas'] = self.season()
         values['lumi_hex'] = SKINS[values['skin']]['color'] or LUMI_COLORS.get(values['lumi_color'], LUMI_COLORS['cloud'])
         return values
 
@@ -165,6 +169,7 @@ class IslandController:
         if key == 'motion' and value not in ('system', 'full', 'subtle', 'off', 'reduced'): return 'Unknown motion setting.'
         if key == 'lumi_color' and value not in LUMI_COLORS: return 'Unknown colour.'
         if key == 'skin' and value not in SKINS: return 'Unknown skin.'
+        if key == 'sound_volume' and not 0 <= value <= 100: return 'Choose a volume from 0 to 100.'
         if key == 'lumi_idle' and value not in ('peek', 'always'): return 'Unknown choice.'
         if key == 'voice_mode' and value not in ('standard', 'live'): return 'Unknown voice mode.'
         if key == 'ai_provider' and value not in PROVIDERS: return 'Unknown provider.'
@@ -341,10 +346,11 @@ class IslandController:
             if busy != hidden:
                 user32.ShowWindow(self._hwnd, SW_HIDE if busy else SW_SHOWNOACTIVATE)
                 hidden = busy
+                self.push('visibility', {'hidden': hidden})  # Lumi stays quiet while out of sight
             tick += 1
             if tick % 5 == 0 and not hidden:
                 self._snap()
-            if tick % 60 == 0 and self.active_skin() != self._skin_sent:  # a festive date began or ended while running
+            if tick % 60 == 0 and self.season() != self._season_sent:  # a festive date began or ended while running
                 self.push('prefs', self.prefs())
             time.sleep(1)
 

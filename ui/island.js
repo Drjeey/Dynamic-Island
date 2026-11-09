@@ -97,10 +97,24 @@ const STATE_CLASS = {
     attentive: 'mood-attentive', checking: 'mood-checking', working: 'mood-working', replying: 'mood-replying',
     nod: 'mood-nod', reconsider: 'mood-reconsider', waiting: 'mood-waiting',
     surprised: 'mood-surprised', shy: 'mood-shy', sad: 'mood-sad', giggle: 'mood-giggle', happy: 'mood-happy',
-    dizzy: 'mood-dizzy', yawn: 'mood-yawn', notice: 'mood-notice', dance: 'mood-dance', coding: 'mood-coding'
+    dizzy: 'mood-dizzy', yawn: 'mood-yawn', notice: 'mood-notice', dance: 'mood-dance', coding: 'mood-coding',
+    snowfall: 'mood-snowfall', present: 'mood-present', jingle: 'mood-jingle', brrr: 'mood-brrr', merry: 'mood-merry'
 };
+// --- SOUNDS (lumi-sounds.js): off until you say yes. Never while Lumi listens or speaks (the mic would hear it),
+// never while the island is out of sight (a full-screen app, or Hide 1 hour), and at most one every 1.5 s
+const sounds = createLumiSounds();
+let windowHidden = false, lastSound = -Infinity;
+function soundFor(name) {
+    if (!prefs.sounds || windowHidden || !sounds.has(name)) return;
+    const activity = lumiState.snapshot().activity;
+    if (activity === 'listening' || activity === 'speaking' || dom.lumi.dataset.mic !== undefined) return;
+    if (performance.now() - lastSound < 1500) return;
+    lastSound = performance.now();
+    sounds.play(name, (prefs.sound_volume ?? 60) / 100);
+}
 const lumiState = createLumiState({
     apply: s => { dom.lumi.className = STATE_CLASS[s] || 'mood-idle'; queueMicrotask(syncPeek); },
+    onReaction: name => soundFor(name),
     // A stuck "thinking" (nothing heard back for 45 s) never leaves Lumi hanging, and offers a way to try again
     onWatchdog: () => {
         if (currentRun) cancelRun();
@@ -144,7 +158,8 @@ function syncAmbient() {
         : 'idle'));
 }
 // A short happy hop after Lumi does something for you
-function celebrate() { lumiState.react('success'); }
+// Over Christmas (prefs.christmas: seasonal dress-up on, 18-26 December) it's a present instead
+function celebrate() { lumiState.react(prefs.christmas ? 'present' : 'success'); }
 
 // --- ACTIVITY (real steps of a request, from activity.py) ---
 // Each request is a run; events carry the run id and a sequence number, so late or repeated ones are ignored.
@@ -183,6 +198,13 @@ function reactToContext(name) {
     lastContextReaction = performance.now();
     lumiState.react(name);
 }
+// Over Christmas it snows on Lumi every 4-8 minutes, while it's quiet and you're around
+(function snow() {
+    setTimeout(() => {
+        if (prefs.christmas && state === 'idle' && intensity !== 'off' && !document.body.classList.contains('resting')) reactToContext('snowfall');
+        snow();
+    }, 240000 + Math.random() * 240000);
+})();
 
 function onActivity(e) {
     if (e.phase === 'run_started') {
@@ -301,8 +323,9 @@ function resolveIntensity() {
     return ['full', 'subtle', 'off'].includes(m) ? m : 'full';
 }
 // Greeting: once a day on first open, and when you come back after being away
+const MERRY = 'Merry Christmas';  // Python's greeting on 25 December (api.py), which gets its own moment
 function greet(text) {
-    lumiState.react('greet');
+    lumiState.react(text === MERRY ? 'merry' : 'greet');
     if (text && state === 'idle' && !statusActive) showToast(text, 'toast', 2200);
 }
 // Eyes briefly look somewhere, unless Lumi is busy with something else
@@ -525,6 +548,7 @@ window.updateState = function(msg) {
         case 'chat_delta': onChatDelta(data); return;
         case 'level': onLevel(data); return;
         case 'shake': lumiState.react('dizzy'); return;  // you shook the island
+        case 'visibility': windowHidden = !!data.hidden; return;  // hidden for a full-screen app or Hide 1 hour
         case 'preview': preview(data.name, data.label); return;
         // You've been away from the PC for 10 minutes (or just came back)
         case 'presence': {
@@ -532,7 +556,10 @@ window.updateState = function(msg) {
             away = data.away;
             if (away && !wasAway) lumiState.react('yawn');  // a yawn, then off to sleep
             syncAmbient();
-            if (wasAway && !away) greet('Welcome back'); // a little stretch on waking
+            if (wasAway && !away) {
+                if (prefs.christmas) lumiState.react('brrr');  // it's cold out there; the welcome follows
+                greet('Welcome back'); // a little stretch on waking
+            }
             return;
         }
         case 'summary': showSummary(data); return;
@@ -777,6 +804,17 @@ function addError(text, action) {
     div.appendChild(b);
     layoutChat();
 }
+// Lumi asks once whether it may make sounds (Python only offers it once, after the tour); a yes is answered with a jingle
+function offerSounds() {
+    if (dom.card.classList.contains('visible') || tourStep >= 0 || state !== 'idle') { setTimeout(offerSounds, 30000); return; }
+    lumiState.react('notice');
+    showCard({
+        html: 'Want me to make little sounds? Just soft ones, now and then. You can change this in Settings.',
+        primary: 'Yes, please', secondary: 'No thanks',
+        onPrimary: () => call('answer_sounds', true).then(() => { prefs.sounds = true; lumiState.react('jingle'); }),
+        onSecondary: () => call('answer_sounds', false)
+    });
+}
 function showSettingsCard(text) {
     showCard({ html: escapeHtml(text), primary: 'Open Settings', secondary: 'Not now', onPrimary: () => call('open_settings') });
 }
@@ -801,7 +839,7 @@ $('chat-close').addEventListener('click', () => collapse());
 let clickTimer = null, holdTimer = null, held = false;
 dom.lumiBody.addEventListener('click', e => {
     if (held) { held = false; return; }
-    if (e.detail >= 2) { clearTimeout(clickTimer); lumiState.react('giggle'); return; }
+    if (e.detail >= 2) { clearTimeout(clickTimer); lumiState.react(prefs.christmas ? 'jingle' : 'giggle'); return; }
     clickTimer = setTimeout(() => { if (state !== 'chat') call('open_chat'); }, 260);
 });
 dom.lumiBody.addEventListener('pointerdown', () => {
@@ -829,7 +867,7 @@ dom.lumi.addEventListener('mousemove', e => {
     }
     petLastX = e.clientX;
     petTurns = petTurns.filter(t => now - t < 1000);
-    if (petTurns.length >= 4 && now > petCooldown) { petCooldown = now + 3000; petTurns = []; lumiState.react('happy'); }
+    if (petTurns.length >= 4 && now > petCooldown) { petCooldown = now + 3000; petTurns = []; lumiState.react(prefs.christmas ? 'jingle' : 'happy'); }
 });
 dom.lumi.addEventListener('mouseleave', () => { clearTimeout(shyTimer); shyShown = false; petLastX = null; petDir = 0; petTurns = []; });
 
@@ -1335,6 +1373,7 @@ function init() {
         if (info.hotkey_error) showSettingsCard(info.hotkey_error);
         if (info.onboarding) setTimeout(startOnboarding, 1200);
         else if (info.greeting) setTimeout(() => greet(info.greeting), 800);
+        if (info.offer_sounds) setTimeout(offerSounds, 6000);
     });
     call('activity_snapshot').then(e => { if (e) { currentRun = e.run; lastSeq = e.seq - 1; onActivity(e); } });
     // Follow Windows if its reduced-motion setting changes while Lumi is running
