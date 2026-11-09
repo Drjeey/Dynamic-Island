@@ -87,14 +87,18 @@ SKINS = {
     'cat': {'name': 'Cat', 'color': '#F4B183'}, 'bunny': {'name': 'Bunny', 'color': '#F1ECF6'}, 'bear': {'name': 'Bear', 'color': '#CDA782'},
     'robot': {'name': 'Robot', 'color': '#BFD0DE'}, 'pixel': {'name': 'Pixel', 'color': '#A5E887'}, 'hologram': {'name': 'Hologram', 'color': '#7FE9E2'},
     'cloud': {'name': 'Cloud', 'color': '#F5F9FF'}, 'slime': {'name': 'Slime', 'color': '#9BE36B'}, 'sprout': {'name': 'Sprout', 'color': '#EADBB8'},
-    'santa': {'name': 'Santa hat', 'color': '#FBEFE6'}, 'pumpkin': {'name': 'Pumpkin', 'color': '#F6A23F'}, 'party': {'name': 'Party', 'color': '#FFD7E8'},
+    'santa': {'name': 'Santa hat', 'color': '#FBEFE6'}, 'reindeer': {'name': 'Reindeer', 'color': '#A9805E'},
+    'snowman': {'name': 'Snowman', 'color': '#F7FBFF'}, 'gingerbread': {'name': 'Gingerbread', 'color': '#C9874F'},
+    'elf': {'name': 'Elf', 'color': '#FFE0C7'},
+    'pumpkin': {'name': 'Pumpkin', 'color': '#F6A23F'}, 'party': {'name': 'Party', 'color': '#FFD7E8'},
 }
+CHRISTMAS_SKINS = ('santa', 'reindeer', 'snowman', 'gingerbread', 'elf')  # one a day over Christmas, in turn
 
 
 def seasonal_skin(day):
     """The skin for a festive date, or None."""
     if day.month == 10 and day.day >= 24: return 'pumpkin'
-    if day.month == 12 and 18 <= day.day <= 26: return 'santa'
+    if day.month == 12 and 18 <= day.day <= 26: return CHRISTMAS_SKINS[(day.day - 18) % len(CHRISTMAS_SKINS)]
     if (day.month, day.day) in ((12, 31), (1, 1)): return 'party'
     return None
 

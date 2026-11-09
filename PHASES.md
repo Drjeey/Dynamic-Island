@@ -597,3 +597,24 @@ You chose full characters (shape, details and accessories, not just a hat) in al
 - **Design detector:** nothing new to fix. The padding warnings are on older parts of the UI, and the stripes advisory is the hologram's scanlines, which are deliberate.
 
 **Not tested yet:** how the skins look on your own desktop, against your wallpaper (the sheet used a plain dark background); a festive date arriving in the real app (only the date logic was tested); the skin picker with a keyboard or screen reader.
+
+### More Christmas skins (9 Nov 2026)
+
+You chose four more, and a different Christmas skin each day.
+
+| Skin | Looks like |
+|---|---|
+| Reindeer | Brown, with antlers, soft ears, a lighter muzzle and a shiny red nose |
+| Snowman | Snow-white, with a top hat, a carrot nose and a red striped scarf |
+| Gingerbread | Biscuit brown, with white icing at the top and bottom, and two gumdrop buttons |
+| Elf | A green hat with a gold bell, a red band, and pointy ears that tint with Lumi |
+
+**Seasonal dress-up:** from 18 to 26 December Lumi now wears a different Christmas skin each day, in turn: Santa hat, Reindeer, Snowman, Gingerbread, Elf, then round again. Christmas Day is the Snowman. Halloween and New Year are unchanged. The list is `CHRISTMAS_SKINS` in `lumi/config.py`, and the Settings description says so.
+
+**How it was tested** (a scratch copy of the app):
+- **Python:** 17 to 27 December gives nothing, then the five skins in turn, then nothing; Halloween, New Year and an ordinary day are unchanged; every skin in `SKINS` has a drawing.
+- **The new skins in 13 moods, next to the Bear, checked by eye:** they tint correctly and keep clear of the eyes, glasses and "!". The snowman's thin scarf stripes read like ruler marks at real size, so they're now bolder and fewer, checked again close up.
+- **The real app:** peeking (hats and antlers tuck behind the island) and full view with the coding glasses; Settings shows 17 tiles and the new description; clicking Gingerbread, Snowman, Gingerbread and Santa hat dresses Lumi each time; no script errors.
+- **One false alarm:** a check said picking Gingerbread didn't change Lumi. My first test run had already picked it, so the second click landed on the tile that was already chosen, where correctly nothing happens.
+
+**Not tested yet:** a Christmas date arriving in the real app (only the date logic was tested).

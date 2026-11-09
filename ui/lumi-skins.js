@@ -42,6 +42,21 @@ const LUMI_SKIN_ART = {
     santa: `<path fill="#D9423A" d="M9 10C12-6 28-14 42-9c8 3 12 9 13 16h-6c-3-7-5-8-7-6 2 4 4 7 5 9z"/>
         <rect fill="#FFFFFF" x="6" y="5.5" width="44" height="8" rx="4"/>
         <circle fill="#FFFFFF" cx="55" cy="10" r="4.5"/>`,
+    reindeer: `<path fill="none" stroke="#6E4B32" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M17 6c-1-6-3-10-6-14M13-3l-5-3M14-5l1-7M43 6c1-6 3-10 6-14M47-3l5-3M46-5l-1-7"/>
+        <ellipse class="skin-part" cx="3" cy="11" rx="5.5" ry="3" transform="rotate(-28 3 11)"/><ellipse class="skin-part" cx="57" cy="11" rx="5.5" ry="3" transform="rotate(28 57 11)"/>
+        <ellipse fill="#FFFFFF" fill-opacity=".3" cx="30" cy="35" rx="10" ry="7"/>
+        <circle fill="#E0453A" cx="30" cy="30.5" r="3"/><circle fill="#FFFFFF" cx="29" cy="29.5" r=".9"/>`,
+    snowman: `<rect fill="#1F1F24" x="19" y="-12" width="22" height="17" rx="2"/><rect fill="#D9423A" x="19" y="0" width="22" height="3.5"/>
+        <rect fill="#1F1F24" x="13" y="4" width="34" height="4" rx="2"/>
+        <path fill="#F28C28" d="m30 29.5 9.5 2-9.5 2z"/>
+        <path fill="#D9423A" d="M3 37q27 9 54 0v6q-27 9-54 0zM41 41h7v13h-7z"/>
+        <path fill="none" stroke="#FFFFFF" stroke-width="2.6" d="M17 41.5v6M31 43v6M44.5 46v3"/>`,
+    gingerbread: `<path fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" d="M10 8q3-3 6 0t6 0 6 0 6 0 6 0 6 0 4 0M10 45q3 3 6 0t6 0 6 0 6 0 6 0 6 0 4 0"/>
+        <circle fill="#E0453A" cx="24.5" cy="40" r="2.3"/><circle fill="#3FAE5A" cx="35.5" cy="40" r="2.3"/>`,
+    elf: `<path class="skin-part" d="M2 18-7 10l4 13zM58 18l9-8-4 13z"/>
+        <path fill="#3FAE5A" d="M8 9C10 0 20-6 34-6c8 0 16 6 18 15zM16 0C11-5 6-9 1-12c7 0 15 3 22 7z"/>
+        <circle fill="#F5B83D" cx="1" cy="-12" r="2.8"/>
+        <rect fill="#D9423A" x="6" y="5" width="48" height="6" rx="3"/>`,
     pumpkin: `<path fill="none" stroke="#000" stroke-opacity=".16" stroke-width="2" stroke-linecap="round" d="M15 4C6 14 6 36 15 46M45 4c9 10 9 32 0 42M24 1.5c-6 11-6 36 0 47M36 1.5c6 11 6 36 0 47"/>
         <path fill="#6FA34A" d="M26 3c0-5-1-7-3-11l8-1c0 4 2 7 3 12z"/>
         <path fill="none" stroke="#6FA34A" stroke-width="1.8" stroke-linecap="round" d="M33-3c5-4 10-1 7 3"/>`,
