@@ -686,3 +686,38 @@ You asked your followers for Christmas skin ideas and got three. Two are built:
 - **Python:** the offer once, and never during the tour; volume outside 0–100 refused; the answer turning sounds on and off; the preferences carry both settings.
 - **The real app (scratch copy, sound output spied on, so nothing played):** the offer card appears by itself; off is silent; on plays at the chosen volume; reactions without a sound stay silent; silent while listening, speaking or hidden; a second sound within 1.5 s is skipped; Hide 1 hour really tells the page, and again when it's back; the answer turns sounds on; the Settings switch, slider (saves, then jingles at the new volume), refusal of 140 and disabling all work; no script errors (after fixing one: a test's offline renderer refused to be "resumed").
 - **Not tested yet:** hearing the sounds through your speakers in the app (they were checked as files); the full-screen case for real (Hide 1 hour uses the same message); Windows' own volume and mute (sounds go through the normal Windows mixer).
+
+## Character polish (9 Nov 2026)
+
+You asked for Lumi's designs to look much better. Every skin and panel was captured from the real app first, enlarged, on a dark and a light background. The panels held up well, so this pass is about the characters, which looked flat and lost their edge on light wallpapers.
+
+| Area | What changed |
+|---|---|
+| Depth | Every body now has light from the top left, shade to the bottom right and a thin darker rim (`--shade` in `ui/lumi-skins.css`). It's all inside the body, so nothing see-through meets the window's colour key. The listening ring is drawn on top of the shading instead of replacing it. Cloud, Pixel and Star keep flat bodies, because their shapes aren't a single rounded form |
+| Edges | The rim gives pale skins (Bunny, Santa hat, Snowman, Classic) an edge on light wallpapers |
+| Faces | Eyes have a larger glint and a second small one. Lumi has a faint blush all the time, which moods deepen; not on Robot, Pixel, Hologram or Star |
+| Colour | Cloud is a soft blue-white (`#E6F0FF`) so it shows on light backgrounds; Slime and Pixel are slightly less neon. The Star has a highlight, and its sparkle is gold instead of white, which vanished on light backgrounds |
+| Settings | The skin tiles use the same shading, eyes and blush, so the picker still shows exactly what you get |
+| Panels | Text selection in notes and chat now uses Lumi's blue. Nothing else changed |
+
+**How it was tested:** before and after sheets of all 19 skins at 3x on dark and light backgrounds, compared by eye; in the real app (a scratch copy), idle, listening (the ring and the shading together, with and without a mic level), shy, sad and the Star; the Settings tiles; no script errors.
+
+**Not tested yet:** the new look on your own wallpaper; every mood on every skin after this change (the shading sits under the face, and five states were checked).
+
+### Panel polish (9 Nov 2026)
+
+You asked for the panels too. They were already clean, so this is a refinement, not a new look: the panels now share the characters' light from above.
+
+| Area | What changed |
+|---|---|
+| Surfaces | New tokens in `ui/island.css`: `--surface` (a touch lighter at the top), `--surface-hover` and `--lift` (a hairline of light on the top edge). Dashboard tiles, focus chips, agent chips, chat bubbles, menu buttons, the selected command-bar row, the card and the speech bubble all use them. The island itself has a very slight top-to-bottom gradient |
+| Buttons | The amber focus buttons, the blue send button and the card's main button have a soft gradient and a lit top edge, so they read as pressable |
+| Dashboard rings | Drawn as a masked band instead of a ring with a painted centre, so they sit correctly on the new surface |
+| Music | Larger artwork tile (60 px) with a violet tint when there's no cover, and tighter spacing |
+| Notes | The small capitals "QUICK NOTE" label is now a proper title with an icon, matching Focus and Agents |
+| Menu | Settings, Hide 1 hour and Quit each sit on their own button shape instead of bare text |
+| Mini Lumis | The small Lumis in chat and the command bar have the same shading as the character |
+
+**How it was tested:** every panel captured before and after from the real app (a scratch copy) and compared by eye: dashboard, music, focus, notes, menu, chat, Agents, command bar, the card and the speech bubble. Nothing overflows, and there are no script errors.
+
+**Not tested yet:** hover and pressed states by eye (their styles were changed with the rest); the focus panel while a session runs.

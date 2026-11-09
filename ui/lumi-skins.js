@@ -60,13 +60,14 @@ const LUMI_SKIN_ART = {
     // Your followers' idea: Lumi as a star in a Santa hat, holding a peppermint stick. The body is drawn here (lumi-skins.css
     // hides the usual one); a round, thick outline of the same colour softens its points
     star: `<path class="skin-part star-body" stroke-width="6" stroke-linejoin="round" d="M30-2 39.4 14.1 57.6 18 45.2 31.9 47 50.5 30 43 13 50.5 14.8 31.9 2.4 18 20.6 14.1z"/>
+        <ellipse fill="#FFFFFF" fill-opacity=".38" cx="12.5" cy="21" rx="4.6" ry="2.1" transform="rotate(-14 12.5 21)"/>
         <path fill="#D9423A" d="M20 3 29-9c5-5 13-5 16 0l-5 1c-3-3-6-2-7 1l6 8z"/>
         <rect fill="#FFFFFF" x="18" y="-1" width="23" height="5.5" rx="2.75" transform="rotate(-10 29 1)"/>
         <circle fill="#FFFFFF" cx="45" cy="-8" r="3.5"/>
         <path fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" d="M56 52V32c0-5.5-6-5.5-6-1"/>
         <path fill="none" stroke="#E0453A" stroke-width="4.5" stroke-dasharray="2.6 2.6" d="M56 52V32c0-5.5-6-5.5-6-1"/>
         <ellipse class="skin-part" cx="53" cy="41" rx="4.6" ry="3.6"/>
-        <path fill="none" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round" d="M5 38v6M2 41h6"/>`,
+        <path fill="none" stroke="#F5B83D" stroke-width="1.3" stroke-linecap="round" d="M5 38v6M2 41h6"/>`,
     jumper: `<path fill="none" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" d="M30 41.5v5M27.8 44h4.4M28.4 42.4l3.2 3.2M31.6 42.4l-3.2 3.2"/>`,
     pumpkin: `<path fill="none" stroke="#000" stroke-opacity=".16" stroke-width="2" stroke-linecap="round" d="M15 4C6 14 6 36 15 46M45 4c9 10 9 32 0 42M24 1.5c-6 11-6 36 0 47M36 1.5c6 11 6 36 0 47"/>
         <path fill="#6FA34A" d="M26 3c0-5-1-7-3-11l8-1c0 4 2 7 3 12z"/>

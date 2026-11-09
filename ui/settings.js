@@ -73,7 +73,9 @@ function renderSwatches(colors, current) {
 
 // A tile for each skin, drawn with the same art as the island. Picking one brings Lumi out to show it off
 const SKIN_FACE = '<rect fill="#1C1C1E" class="eye-open" x="17" y="15" width="8" height="12" rx="4"/><rect fill="#1C1C1E" class="eye-open" x="35" y="15" width="8" height="12" rx="4"/>'
-    + '<circle fill="#FFF" class="eye-glint" cx="22.6" cy="17.6" r="1.4"/><circle fill="#FFF" class="eye-glint" cx="40.6" cy="17.6" r="1.4"/>';
+    + '<circle fill="#FFF" class="eye-glint" cx="22.4" cy="17.8" r="1.6"/><circle fill="#FFF" class="eye-glint" cx="40.4" cy="17.8" r="1.6"/>'
+    + '<circle fill="#FFF" class="eye-glint" cx="19.3" cy="23.6" r=".75"/><circle fill="#FFF" class="eye-glint" cx="37.3" cy="23.6" r=".75"/>'
+    + '<g class="tile-cheeks" fill="#FF8FA3" opacity=".3"><ellipse cx="13" cy="30" rx="3.2" ry="1.9"/><ellipse cx="47" cy="30" rx="3.2" ry="1.9"/></g>';
 function renderSkins(skins, colors) {
     $('skins').innerHTML = Object.entries(skins).map(([key, skin]) =>
         `<label class="skin-tile" data-skin="${key}"><input type="radio" name="skin" value="${key}" aria-label="${skin.name}" ${key === values.skin ? 'checked' : ''}>`

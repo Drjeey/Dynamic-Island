@@ -88,8 +88,8 @@ LUMI_COLORS = {'cloud': '#F2F2F7', 'peach': '#FFD9C4', 'mint': '#C9F0DA', 'sky':
 SKINS = {
     'classic': {'name': 'Classic', 'color': None},
     'cat': {'name': 'Cat', 'color': '#F4B183'}, 'bunny': {'name': 'Bunny', 'color': '#F1ECF6'}, 'bear': {'name': 'Bear', 'color': '#CDA782'},
-    'robot': {'name': 'Robot', 'color': '#BFD0DE'}, 'pixel': {'name': 'Pixel', 'color': '#A5E887'}, 'hologram': {'name': 'Hologram', 'color': '#7FE9E2'},
-    'cloud': {'name': 'Cloud', 'color': '#F5F9FF'}, 'slime': {'name': 'Slime', 'color': '#9BE36B'}, 'sprout': {'name': 'Sprout', 'color': '#EADBB8'},
+    'robot': {'name': 'Robot', 'color': '#BFD0DE'}, 'pixel': {'name': 'Pixel', 'color': '#9FE3A2'}, 'hologram': {'name': 'Hologram', 'color': '#7FE9E2'},
+    'cloud': {'name': 'Cloud', 'color': '#E6F0FF'}, 'slime': {'name': 'Slime', 'color': '#A5E57C'}, 'sprout': {'name': 'Sprout', 'color': '#EADBB8'},
     'santa': {'name': 'Santa hat', 'color': '#FBEFE6'}, 'reindeer': {'name': 'Reindeer', 'color': '#A9805E'},
     'snowman': {'name': 'Snowman', 'color': '#F7FBFF'}, 'gingerbread': {'name': 'Gingerbread', 'color': '#C9874F'},
     'elf': {'name': 'Elf', 'color': '#FFE0C7'}, 'star': {'name': 'Star', 'color': '#FFD45C'},
