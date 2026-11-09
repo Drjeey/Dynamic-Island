@@ -92,10 +92,12 @@ SKINS = {
     'cloud': {'name': 'Cloud', 'color': '#F5F9FF'}, 'slime': {'name': 'Slime', 'color': '#9BE36B'}, 'sprout': {'name': 'Sprout', 'color': '#EADBB8'},
     'santa': {'name': 'Santa hat', 'color': '#FBEFE6'}, 'reindeer': {'name': 'Reindeer', 'color': '#A9805E'},
     'snowman': {'name': 'Snowman', 'color': '#F7FBFF'}, 'gingerbread': {'name': 'Gingerbread', 'color': '#C9874F'},
-    'elf': {'name': 'Elf', 'color': '#FFE0C7'},
+    'elf': {'name': 'Elf', 'color': '#FFE0C7'}, 'star': {'name': 'Star', 'color': '#FFD45C'},
+    'jumper': {'name': 'Jumper', 'color': '#FFE7D1'},
     'pumpkin': {'name': 'Pumpkin', 'color': '#F6A23F'}, 'party': {'name': 'Party', 'color': '#FFD7E8'},
 }
-CHRISTMAS_SKINS = ('santa', 'reindeer', 'snowman', 'gingerbread', 'elf')  # one a day over Christmas, in turn
+# One a day over Christmas, in turn from 18 December, so the Star (your followers' idea) opens it and is on Christmas Day
+CHRISTMAS_SKINS = ('star', 'santa', 'reindeer', 'snowman', 'gingerbread', 'elf', 'jumper')
 
 
 def is_christmas(day):

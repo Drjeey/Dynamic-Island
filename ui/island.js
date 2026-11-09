@@ -414,6 +414,7 @@ function setSkin(name) {
     if (dom.lumi.dataset.skin === name) return;
     dom.lumi.dataset.skin = name;
     dom.skin.innerHTML = LUMI_SKIN_ART[name] || '';
+    trackHitAreas(400);  // a skin can change the clickable shape (the star's is smaller)
 }
 
 // --- STATE ENGINE ---
@@ -1306,7 +1307,8 @@ function endTour(finished) {
 // It also reports how tall the content is, so the window can grow to fit it. Measured only while something moves.
 const hitTargets = [
     { el: dom.island, inset: 2 },
-    { el: dom.lumiBody, inset: 4, ellipse: true },
+    // The painted area must stay inside what's drawn, or it shows as a dark patch: the star needs a smaller oval
+    { el: dom.lumiBody, inset: () => (dom.lumi.dataset.skin === 'star' ? 13 : 4), ellipse: true },
     { el: dom.mic, inset: 1, ellipse: true },
     { el: dom.card, inset: 2 }
 ];
@@ -1327,12 +1329,13 @@ function reportHitAreas() {
     for (const t of hitTargets) {
         const style = getComputedStyle(t.el);
         const r = t.el.getBoundingClientRect();
-        if (style.opacity === '0' || style.display === 'none' || r.width <= 2 * t.inset || r.height <= 2 * t.inset) continue;
+        const inset = typeof t.inset === 'function' ? t.inset() : t.inset;
+        if (style.opacity === '0' || style.display === 'none' || r.width <= 2 * inset || r.height <= 2 * inset) continue;
         shapes.push({
-            x: Math.round(r.left + t.inset), y: Math.round(r.top + t.inset),
-            w: Math.round(r.width - 2 * t.inset), h: Math.round(r.height - 2 * t.inset),
+            x: Math.round(r.left + inset), y: Math.round(r.top + inset),
+            w: Math.round(r.width - 2 * inset), h: Math.round(r.height - 2 * inset),
             ellipse: !!t.ellipse,
-            radius: Math.round(Math.max(0, Math.min(parseFloat(style.borderTopLeftRadius) || 0, r.height / 2) - t.inset))
+            radius: Math.round(Math.max(0, Math.min(parseFloat(style.borderTopLeftRadius) || 0, r.height / 2) - inset))
         });
     }
     const height = contentBottom();

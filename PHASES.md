@@ -644,6 +644,31 @@ You asked for all five. They happen only from 18 to 26 December with **Dress up 
 
 **Not tested yet:** the 4–8 minute snowfall timer running in the real app (its condition was reviewed, and the reaction itself tested); the reactions on your own wallpaper.
 
+### Star and Jumper: skins from your followers (9 Nov 2026)
+
+You asked your followers for Christmas skin ideas and got three. Two are built:
+
+| Idea | Built as |
+|---|---|
+| "A star with a Christmas hat, holding a peppermint stick" | **Star**: a golden, softly rounded five-point star in a Santa hat, with a red-and-white candy cane in a tiny hand (Lumi's first hand). Built as suggested |
+| "Minion with a Christmas hat" | Not built: Minions belong to Illumination and Universal, and a lookalike in an app you're launching could be taken down. What the reference pictures had in common was a cosy Christmas outfit, so that became **Jumper**: Lumi in a red knitted jumper with a collar, a green band of white knitted dots, a snowflake and a ribbed hem |
+
+| Area | What changed |
+|---|---|
+| Star | The body is drawn in `lumi-skins.js` (the usual one steps aside), so moods tint the star itself. A star can't wear the listening ring (it would be a box), so on this skin listening shows as the blue tint and wider eyes |
+| Click area | The painted area that makes Lumi clickable shows as a dark patch wherever nothing covers it, and the usual oval would poke out between the star's points. For the Star it's a smaller oval (`hitTargets` in `island.js` now allows a per-skin inset), and changing skin repaints it |
+| Jumper | The jumper is part of the body's own fill (CSS layers), so it follows Lumi's shape exactly; the face above stays the skin's cream colour and tints with the moods |
+| Rotation | Over Christmas, in turn: Star, Santa hat, Reindeer, Snowman, Gingerbread, Elf, Jumper. The Star opens it on 18 December and is back for Christmas Day |
+
+**How it was tested:**
+- **Both in 13 moods, next to the Santa hat, checked by eye:** they tint correctly, the hat and candy cane stay on through tilts, and the jumper never covers the mouth.
+- **The star's click area, measured in the real app:** every point on the painted oval sits at least 3.4 units inside the star's edge, so there are no dark patches; other skins keep the usual, bigger oval.
+- **The real app:** peeking (the star's eyes just under the island), full view, the coding glasses on the star, and the jumper; Settings shows 19 tiles; picking Star and Jumper dresses Lumi each time from a clean start; no script errors.
+- **The rotation:** 18 to 26 December gives Star, Santa hat, Reindeer, Snowman, Gingerbread, Elf, Jumper, Star, Santa hat; nothing either side.
+- **One false alarm:** a re-run said picking Star didn't work, because the first run had already saved Star. From a clean start it works every time.
+
+**Not tested yet:** clicking the star with a real mouse (the click area was checked by geometry).
+
 ## Sound effects, phase 1: Christmas (9 Nov 2026)
 
 **Decisions:** sounds are made in code, not from files, because the bundled sound files in `video/` have no recorded licence for shipping in an app. Sounds are **off by default**, and Lumi asks once (your choice). Phase 2 (everyday moments: focus done, break over, milestones, agents finishing, small cartoon sounds) is next.

@@ -30,6 +30,22 @@
 [data-skin="slime"] .lumi-shape { border-radius: 48% 52% 44% 44% / 72% 72% 28% 28%; }
 [data-skin="sprout"] .lumi-shape { border-radius: 50% 50% 48% 48% / 42% 42% 58% 58%; }
 [data-skin="gingerbread"] .lumi-shape { border-radius: 48%; }
+/* The star's body is drawn in lumi-skins.js, so the usual one steps aside. The listening ring would be a box around a
+   star, so it's off here: the blue tint and wider eyes still say "listening" */
+[data-skin="star"] .lumi-shape { background-color: transparent; box-shadow: none !important; border-radius: 0; }
+[data-skin="star"] .star-body { stroke: var(--body); transition: fill 0.3s, stroke 0.3s; }
+/* A knitted Christmas jumper from the collar down: part of the body's own fill, so it follows Lumi's shape exactly.
+   Layers, top first: white dots knitted into the green band, the band, the ribbed hem, the collar, the red jumper */
+[data-skin="jumper"] .lumi-shape {
+    background-image:
+        radial-gradient(circle, #FFFFFF 0 1.1px, transparent 1.5px),
+        linear-gradient(transparent 81%, #2E8B57 81% 89%, transparent 89%),
+        repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 4px),
+        linear-gradient(transparent 70%, #A82A30 70% 75%, #C8343A 75%);
+    background-size: 6px 4px, 100% 100%, 100% 4px, 100% 100%;
+    background-position: 1px 84.5%, 0 0, 0 100%, 0 0;
+    background-repeat: repeat-x, no-repeat, no-repeat, no-repeat;
+}
 [data-skin="pumpkin"] .lumi-shape { border-radius: 48% 48% 46% 46% / 52% 52% 48% 48%; }
 /* On the body, not in the drawing: the face tilts with some moods, and a projector's floor shouldn't */
 [data-skin="hologram"] .lumi-shape::after {
