@@ -108,6 +108,7 @@ class IslandController:
         # The key or a model changed: end any live session and start the conversation afresh
         with self._chat_lock:
             if self._live and self._live.running: self._live.toggle()
+            if self._chat: self._chat.close()
             self._chat = self._live = None
 
     # --- talking to the page ---
@@ -170,6 +171,7 @@ class IslandController:
         if key == 'lumi_color' and value not in LUMI_COLORS: return 'Unknown colour.'
         if key == 'skin' and value not in SKINS: return 'Unknown skin.'
         if key == 'sound_volume' and not 0 <= value <= 100: return 'Choose a volume from 0 to 100.'
+        if key == 'monitor' and value < 0: return 'Unknown display.'
         if key == 'lumi_idle' and value not in ('peek', 'always'): return 'Unknown choice.'
         if key == 'voice_mode' and value not in ('standard', 'live'): return 'Unknown voice mode.'
         if key == 'ai_provider' and value not in PROVIDERS: return 'Unknown provider.'
@@ -454,6 +456,9 @@ class IslandController:
         self._snap()
         for watcher in (self._watch_visibility, self._watch_pointer, self._watch_stats):
             threading.Thread(target=watcher, daemon=True).start()
+        recap = threading.Timer(25, self.offer_weekly_summary)  # once the island has settled
+        recap.daemon = True
+        recap.start()
 
     def update_hit_areas(self, shapes, page_width, content_height=0):
         # Keyed-out pixels let the mouse through, so paint the form behind the page in HIT_COLOR

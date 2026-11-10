@@ -549,7 +549,7 @@ window.updateState = function(msg) {
         case 'chat_delta': onChatDelta(data); return;
         case 'level': onLevel(data); return;
         case 'shake': lumiState.react('dizzy'); return;  // you shook the island
-        case 'visibility': windowHidden = !!data.hidden; return;  // hidden for a full-screen app or Hide 1 hour
+        case 'visibility': windowHidden = !!data.hidden; document.body.classList.toggle('window-hidden', windowHidden); return;  // hidden for a full-screen app or Hide 1 hour
         case 'preview': preview(data.name, data.label); return;
         // You've been away from the PC for 10 minutes (or just came back)
         case 'presence': {
@@ -710,6 +710,8 @@ function offerNext(data) {
 
 // --- WEEKLY SUMMARY ---
 function showSummary(data) {
+    // The weekly recap arrives by itself; it waits its turn rather than replace a card you haven't answered
+    if (!data.asked && (dom.card.classList.contains('visible') || tourStep >= 0)) { setTimeout(() => showSummary(data), 30000); return; }
     lumiState.react('notice');
     const w = data.last_week || {}, now = data.this_week || {};
     let html;
@@ -937,10 +939,13 @@ function shownAgent() {
         || list.find(s => agentEnded[s.id] && performance.now() - agentEnded[s.id] < SHOW_FINISHED_MS) || null;
 }
 const agentShort = s => s.agent === 'claude' ? 'Claude' : 'Codex';
+let shownDots = '';
 function renderAgentPill(s) {
     dom.agentCurrent.textContent = s.status === 'running' ? `${agentShort(s)} · ${s.current}`
         : s.status === 'done' ? `${s.agent_name} is done` : s.status === 'stopped' ? `${s.agent_name} stopped` : `${s.agent_name} hit a problem`;
-    dom.agentDots.innerHTML = s.nodes.filter(n => n.kind !== 'prompt').slice(-7).map(n => `<i class="${n.state}"></i>`).join('');
+    // Rebuilt only when the steps change: rebuilding on every update restarted the active dot's pulse before it showed
+    const dots = s.nodes.filter(n => n.kind !== 'prompt').slice(-7).map(n => `<i class="${n.state}"></i>`).join('');
+    if (dots !== shownDots) dom.agentDots.innerHTML = shownDots = dots;
 }
 
 function fmtElapsed(sec) { return sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${String(sec % 60).padStart(2, '0')}s`; }
@@ -1157,7 +1162,11 @@ dom.notesArea.addEventListener('input', () => {
 });
 
 // Removed manual drag logic to use Native Dragging
-window.addEventListener('contextmenu', e => { e.preventDefault(); if (state !== 'command' && state !== 'chat') call('open_menu'); });
+// Right-click opens the menu, except in a text field, where it must not swap the panel you're typing in
+window.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if (state !== 'command' && state !== 'chat' && !e.target.closest('input, textarea')) call('open_menu');
+});
 
 // Scroll on the island changes the volume, with a level shown in the island
 let lastWheel = 0;

@@ -1,6 +1,8 @@
 import json
+import os
 import tempfile
 import threading
+import time
 from pathlib import Path
 
 # --- PATHS ---
@@ -119,6 +121,7 @@ class Config(dict):
     def __init__(self):
         super().__init__(json.loads(json.dumps(DEFAULT_CONFIG)))  # deep copy so the defaults are never mutated
         self._timer = None
+        self._save_lock = threading.Lock()
         if CONFIG_PATH.exists():
             try:
                 saved = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))
@@ -126,10 +129,28 @@ class Config(dict):
                 self.update({k: v for k, v in saved.items() if k in DEFAULT_CONFIG})
             except Exception as e:
                 print(f"Config Load Error: {e}")
+                # Unreadable settings: keep a copy before the defaults overwrite them at the next save
+                try: os.replace(CONFIG_PATH, CONFIG_PATH.with_name(CONFIG_PATH.name + '.bak'))
+                except OSError: pass
 
     def save(self):
-        try: CONFIG_PATH.write_text(json.dumps(self, indent=2), encoding='utf-8')
-        except Exception as e: print(f"Config Save Error: {e}")
+        # Written beside the file and swapped in, so a crash or power cut mid-save can't leave half a file
+        tmp = CONFIG_PATH.with_name(CONFIG_PATH.name + '.tmp')
+        with self._save_lock:
+            try:
+                text = json.dumps(self, indent=2)
+                tmp.write_text(text, encoding='utf-8')
+                for attempt in range(20):  # up to about a second
+                    try:
+                        os.replace(tmp, CONFIG_PATH)
+                        return
+                    except PermissionError:  # another program has the file open for a moment
+                        time.sleep(0.05)
+                # Still held open: write it the plain way rather than lose the change
+                CONFIG_PATH.write_text(text, encoding='utf-8')
+                tmp.unlink(missing_ok=True)
+            except Exception as e:
+                print(f"Config Save Error: {e}")
 
     def save_soon(self, delay=0.5):
         # Dragging fires many events per second; only write once things settle

@@ -10,6 +10,7 @@ from . import providers
 from .activity import Cancelled
 from .credentials import get_api_key
 from .levels import QUIET, LevelMeter
+from .system import SystemHelpers
 from .tools import LumiTools
 
 SYSTEM_INSTRUCTION = (
@@ -21,6 +22,7 @@ SYSTEM_INSTRUCTION = (
 SPOKEN_HINT = "(Spoken aloud: answer in one or two short sentences.) "
 MAX_TRANSCRIPT = 40  # messages kept for the chat panel
 MAX_TOOL_ROUNDS = 5  # tool rounds per question before Lumi must answer in words
+OFFLINE = "You're offline. I can answer once the internet is back."
 
 
 class ChatController:
@@ -68,7 +70,10 @@ class ChatController:
         if self.error:
             return {'error': self.error, 'action': 'settings'}
         self._remember('user', text)
+        chat = None
         try:
+            if self._in_flight is not None and self._chat is self._in_flight:
+                self._chat = None  # an earlier question is still using that conversation: this one gets its own
             chat = self._in_flight = self._session()
             if hasattr(chat, 'on_busy'):
                 chat.on_busy = lambda: run.emit('understanding', label='Trying another model…')
@@ -79,14 +84,16 @@ class ChatController:
             return {'cancelled': True}
         except providers.Declined:
             self._chat = None
-            return {'error': "I can't help with that one."}
+            return self._failed("I can't help with that one.")
         except Exception as e:
             print(f"Response Error ({self.provider_name}): {e}")
             self._chat = None  # start a fresh session next time
-            return {'error': f"{self.label} didn't answer. Check the key and model in Settings, or try again.",
-                    'action': 'retry'}
+            if not SystemHelpers.reachable(quick=True):
+                return self._failed(OFFLINE, 'retry')
+            return self._failed(f"{self.label} didn't answer. Check the key and model in Settings, or try again.", 'retry')
         finally:
-            self._in_flight = None
+            if self._in_flight is chat:
+                self._in_flight = None
         self._remember('lumi', reply)
         return {'reply': reply}
 
@@ -126,6 +133,11 @@ class ChatController:
             return f'Failed: the arguments for {call.name} were missing or the wrong type; try again'
         return self.tools.run(run, call.name, call.args)
 
+    def _failed(self, message, action=None):
+        """An answer that didn't come: kept in the conversation, so the panel still shows it when reopened."""
+        self._remember('lumi', message)
+        return {'error': message, **({'action': action} if action else {})}
+
     def _remember(self, role, text):
         self.messages = (self.messages + [{'role': role, 'text': text}])[-MAX_TRANSCRIPT:]
 
@@ -142,7 +154,10 @@ class ChatController:
             print(f"TTS Init Error: {e}")
             engine = None
         while True:
-            text, done = self.speech_queue.get()
+            item = self.speech_queue.get()
+            if item is None:
+                return  # this conversation was replaced (close())
+            text, done = item
             try:
                 if engine:
                     engine.say(text)
@@ -175,7 +190,12 @@ class ChatController:
         self._hush.clear()
         done = threading.Event()
         self.speech_queue.put((text, done))
-        done.wait()
+        done.wait(20 + len(text) / 5)  # speech that never finishes must not hold the microphone for ever
+
+    def close(self):
+        """Ends the speech thread; called when this conversation is replaced."""
+        self._hush.set()
+        self.speech_queue.put(None)
 
     def listen_and_respond(self):
         if not self.busy.acquire(blocking=False):
@@ -211,7 +231,8 @@ class ChatController:
             return fail("Sorry, I didn't catch that.")
         except sr.RequestError as e:
             print(f"Speech Service Error: {e}")
-            return fail("Speech service is unreachable.")
+            return fail("You're offline, so I can't make out speech right now." if not SystemHelpers.reachable(quick=True)
+                        else "Speech service is unreachable.")
         except Exception as e:
             print(f"Microphone Error: {e}")
             return fail("I can't reach your microphone.")

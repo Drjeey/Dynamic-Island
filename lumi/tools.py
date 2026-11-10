@@ -120,7 +120,10 @@ class LumiTools:
 
     def change_volume(self, percent_change: int) -> str:
         """Raises (positive) or lowers (negative) the system volume by the given number of percentage points."""
-        result = Volume.change(round(percent_change / 2))
+        steps = round(percent_change / 2)  # the volume moves in steps of 2
+        if not steps and percent_change:
+            steps = 1 if percent_change > 0 else -1  # a small request still moves it
+        result = Volume.change(steps)
         if not result:
             raise ToolFailed("Couldn't change the volume")
         return f"Volume {result['level']}%"

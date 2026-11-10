@@ -671,7 +671,9 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 @keyframes boop { 0% { transform: scale(1, 1); } 35% { transform: scale(1.08, 0.88); } 100% { transform: scale(1, 1); } }
 #lumi-body.boop { animation: boop 0.26s var(--spring) 1 !important; }
 /* After two minutes without the mouse nearby, Lumi holds still */
-.resting #lumi-body, .resting .eq i { animation-play-state: paused; }
+.resting #lumi-body, .resting .eq i, .resting #lumi-eyes, .resting #lumi-thought i, .resting .agent-dots i { animation-play-state: paused; }
+/* Out of sight (a full-screen app, or Hide 1 hour): nothing animates */
+.window-hidden *, .window-hidden *::before, .window-hidden *::after { animation-play-state: paused !important; }
 
 /* --- REDUCED MOTION --- */
 /* "Follow Windows" uses the system setting (also Windows' "Animation effects"); Settings can force either way */

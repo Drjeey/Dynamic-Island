@@ -170,7 +170,9 @@ class IslandAPI:
             if not word.startswith(first.lower()) or (rest and first.lower() != word):
                 continue
             if word == 'focus':
-                minutes = int(rest) if rest.isdigit() and 0 < int(rest) <= 240 else 25
+                if rest and not rest.isdigit():
+                    continue  # "focus abc" isn't a length
+                minutes = max(1, min(240, int(rest))) if rest else 25
                 if self._ctrl.focus.active:
                     results.append({'kind': 'command', 'id': 'stop_focus', 'title': 'Stop focus', 'glyph': icon})
                 else:
@@ -273,6 +275,8 @@ class SettingsAPI:
         if key not in EDITABLE:
             return {'ok': False, 'error': 'Unknown setting.'}
         try:
+            if EDITABLE[key] is bool and not isinstance(value, bool):
+                raise ValueError(value)  # bool('false') would be True
             value = EDITABLE[key](value)
         except (TypeError, ValueError):
             return {'ok': False, 'error': 'That value isn\'t valid.'}

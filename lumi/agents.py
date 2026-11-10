@@ -60,6 +60,17 @@ def find_cli(agent):
     return str(max(found, key=lambda p: (_version_key(p), p.stat().st_mtime)))
 
 
+_seen = {}  # agent -> (when checked, installed): looking for the tools walks the disk, and this is asked 4 times a second
+
+
+def _installed(agent):
+    checked, found = _seen.get(agent, (0, False))
+    if time.time() - checked > 30:
+        found = bool(find_cli(agent))
+        _seen[agent] = (time.time(), found)
+    return found
+
+
 # --- labels ---
 def _short(text, n=60):
     text = ' '.join(str(text or '').split())
@@ -124,6 +135,8 @@ HINTS = (
     ('not logged in', 'Not signed in. In a terminal, run the tool once and sign in.'),
     ('/login', 'Not signed in. In a terminal, run claude and type /login.'),
     ('codex login', 'Codex isn\'t signed in. In a terminal, run codex login.'),
+    *((key, 'No internet connection. Check your network, then try again.')
+      for key in ('enotfound', 'getaddrinfo', 'econnrefused', 'etimedout', 'fetch failed', 'connection error', 'network error')),
 )
 
 
@@ -156,11 +169,12 @@ class Session:
         self.stderr = ''            # the last thing the tool said on stderr
         self._seq = 0
         self._by_key = {}           # tool call id -> node
+        self._open = {}             # node id -> calls still running (repeats share a node)
 
     # building the chain
     def begin_turn(self, prompt):
         """A new question to the agent: the chain starts again from it."""
-        self.nodes, self._by_key = [], {}
+        self.nodes, self._by_key, self._open = [], {}, {}
         self.status, self.message, self.ended = 'running', '', None
         self.started = time.time()
         self.title = _short(prompt, 80)
@@ -179,14 +193,18 @@ class Session:
             if placeholder: node['placeholder'] = True
             self.nodes.append(node)
             del self.nodes[:-MAX_NODES]
-        if key: self._by_key[key] = node
+        if key:
+            self._by_key[key] = node
+            self._open[node['id']] = self._open.get(node['id'], 0) + 1
         self.touched = time.time()
         return node
 
     def finish(self, key, ok=True):
         node = self._by_key.pop(key, None)
-        if node and node['state'] == 'active':
-            node['state'] = 'done' if ok else 'failed'
+        if node:
+            self._open[node['id']] = left = self._open.get(node['id'], 1) - 1
+            if node['state'] == 'active' and (left <= 0 or not ok):  # a shared step is done when its last call is
+                node['state'] = 'done' if ok else 'failed'
         self.touched = time.time()
 
     def _settle(self):
@@ -199,6 +217,7 @@ class Session:
     def end(self, status, message=''):
         if self.status != 'running':
             return
+        self.nodes = [n for n in self.nodes if not n.get('placeholder')]  # stand-ins don't belong in the finished chain
         if status == 'failed':
             message = _explain(message)
         for n in self.nodes:
@@ -249,7 +268,8 @@ class Session:
                 return
             for b in content or []:
                 if b.get('type') == 'thinking':
-                    if not (self.nodes and self.nodes[-1]['kind'] == 'think' and self.nodes[-1]['state'] == 'active'):
+                    last = self.nodes[-1] if self.nodes else {}
+                    if not (last.get('kind') == 'think' and last.get('state') == 'active' and not last.get('placeholder')):
                         self.add('think', 'Thinking')
                 elif b.get('type') == 'tool_use':
                     kind, label, detail = claude_tool_node(b.get('name', ''), b.get('input'))
@@ -346,7 +366,7 @@ class AgentManager:
             sessions = sorted(self._sessions.values(), key=lambda s: (s.status != 'running', -s.touched))
             return {'sessions': [s.view() for s in sessions if s.nodes][:4],
                     'running': any(s.status == 'running' and s.nodes for s in sessions),
-                    'available': {a: bool(find_cli(a)) for a in AGENTS},
+                    'available': {a: _installed(a) for a in AGENTS},
                     'cwd': self._ctrl.config.get('agent_cwd') or '', 'agent': self._ctrl.config.get('agent_kind', 'claude'),
                     'mode': self._ctrl.config.get('agent_mode', 'edit'), 'own': bool(self._proc)}
 
@@ -356,19 +376,21 @@ class AgentManager:
             if self._push_timer and not now:
                 return
             wait = 0 if now else max(0, 0.25 - (time.time() - self._last_push))
-            def send():
-                with self._lock:
-                    self._push_timer = None
-                    self._last_push = time.time()
-                    st = self.state()
-                self._ctrl.push('agents', st)
-            if wait <= 0:
-                if self._push_timer: self._push_timer.cancel(); self._push_timer = None
-                send()
-            else:
-                self._push_timer = threading.Timer(wait, send)
+            if wait > 0:
+                self._push_timer = threading.Timer(wait, self._send)
                 self._push_timer.daemon = True
                 self._push_timer.start()
+                return
+            if self._push_timer: self._push_timer.cancel(); self._push_timer = None
+        self._send()
+
+    def _send(self):
+        # The page is told outside the lock: a slow page must not hold up reading the agent's output
+        with self._lock:
+            self._push_timer = None
+            self._last_push = time.time()
+            st = self.state()
+        self._ctrl.push('agents', st)
 
     # --- running a session here ---
     def run(self, agent, prompt, cwd, mode='edit'):
@@ -387,10 +409,11 @@ class AgentManager:
                 return f'{AGENTS[self._starting or working]} is still working. Stop it first.'
             self._starting = agent
         if agent == 'claude':
-            args = [exe, '-p', prompt, '--output-format', 'stream-json', '--verbose']
+            args = [exe, '-p', '--output-format', 'stream-json', '--verbose']
             args += ['--permission-mode', 'acceptEdits'] if mode == 'edit' else ['--allowedTools', 'Read Grep Glob WebSearch WebFetch']
         else:
-            args = [exe, 'exec', '--json', '--skip-git-repo-check', '-s', 'workspace-write' if mode == 'edit' else 'read-only', prompt]
+            args = [exe, 'exec', '--json', '--skip-git-repo-check', '-s', 'workspace-write' if mode == 'edit' else 'read-only']
+        args += ['--', prompt]  # after "--", a task that starts with a dash is still a task, not an option
         # Lumi may itself be started from inside an agent session; its markers must not leak into the child
         env = {k: v for k, v in os.environ.items() if not (k.startswith('CLAUDE_CODE_') or k in ('CLAUDECODE', 'CLAUDE_PID'))}
         if 'CLAUDECODE' in os.environ:

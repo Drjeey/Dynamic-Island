@@ -721,3 +721,40 @@ You asked for the panels too. They were already clean, so this is a refinement, 
 **How it was tested:** every panel captured before and after from the real app (a scratch copy) and compared by eye: dashboard, music, focus, notes, menu, chat, Agents, command bar, the card and the speech bubble. Nothing overflows, and there are no script errors.
 
 **Not tested yet:** hover and pressed states by eye (their styles were changed with the rest); the focus panel while a session runs.
+
+## Fix: second bug pass, including poor connections (10 Nov 2026)
+
+You asked for a check for bugs, glitches and poor connectivity. The whole test suite was run again first: nothing new had broken, so this pass fixes the medium and small bugs left open on 6 November, plus how Lumi behaves when the internet is poor.
+
+| Area | Bug | Fix |
+|---|---|---|
+| Connection | "Offline" was decided from one address (1.1.1.1), which some networks block | Online if any of three addresses answers (`ONLINE_PROBES` in `lumi/system.py`) |
+| Connection | With no internet, chat said the provider "didn't answer", and voice said the speech service was unreachable | Both now say you're offline, after a 2-second check; chat keeps Try again |
+| Connection | An agent that failed for lack of internet showed the tool's raw error | Network errors become "No internet connection. Check your network, then try again." |
+| Settings file | Saved in place, so a crash mid-save could leave half a file, and an unreadable file was silently replaced by defaults | Written beside the file and swapped in (retrying if another program holds it open, then falling back to a plain write). An unreadable file is kept as `config.json.bak` |
+| Settings | Text such as "false" for a switch was stored as on; a negative display was accepted | Both refused |
+| Focus | The timer counted ticks, so a slow page made it run late (60.7 s for a minute) | Counted from the clock: 60.01 s measured |
+| Focus | "Today" counted sessions stopped early; the weekly recap didn't | Both count finished sessions |
+| Focus | One bad line in `focus_log.json`, or a log of the wrong shape, crashed the summary | Bad entries are skipped |
+| Focus | The weekly recap was never offered by itself | Offered 25 s after start, and it waits behind any card you haven't answered |
+| Command bar | `focus 500` and `focus abc` quietly became 25 minutes | `focus 500` offers 240 minutes (the longest), `focus 0` one minute, and `focus abc` offers no session |
+| Chat | A failed answer vanished when the panel was reopened | Kept in the conversation |
+| Chat | A second question could use the first one's conversation while it was still answering | It gets its own |
+| Chat | Every AI setting change left a speech thread running; stuck speech could hold the microphone for ever | The old conversation's thread ends; speech has a time limit |
+| Lumi's tools | "Volume up 1%" did nothing but reported success | A small request moves one step |
+| Agents | The page was told about updates while holding the lock, and the tools were looked for on disk 4 times a second | Told outside the lock; the search is remembered for 30 s |
+| Agents | Two calls sharing a step showed it done when the first ended; "Starting up" and "Working" stayed in finished chains | A shared step is done with its last call; stand-ins are removed |
+| Agents | A task starting with a dash was read as an option | Tasks are passed after `--` (checked with both real tools) |
+| Island | Right-clicking in the note or the agent task box swapped the panel for the menu | Right-click in a text field leaves the panel alone |
+| Island | The active dot's pulse restarted on every update, so it never showed | Dots are rebuilt only when the steps change |
+| Island | Animations ran while the island was hidden | Paused while hidden; a resting Lumi also pauses its eyes, thought dots and the agent dots |
+
+**How it was tested:**
+- **Python (24 new checks, all passing):** one blocked address still counts as online; offline messages; failed answers kept; no leftover threads; a second question gets its own conversation; network hints; the lock; the update limit of about 4 a second; shared steps; stand-ins; tasks after `--`; 100 saves under constant reading with no half-written file; a broken file kept.
+- **Earlier suites:** the first suite went from 26 flagged items to 8. Those 8 are not bugs: four are checks written against the old design (they don't use the new close and own-conversation paths, or use a reader that locks the file), two are prompt shapes that never occur in real logs, one recovers in practice as a new chain, and one is below.
+- **Real tools:** Claude Code and Codex both accept a task after `--` (Codex answered; Claude Code reached its usual credit error, which means the task was read correctly).
+- **The real app (a scratch copy):** right-click in the note and agent box keeps the panel, and elsewhere still opens the menu; the dot pulses through ten updates; animations pause while hidden; the recap waits behind a card; the focus commands; a real question answered in 6.9 s; Settings loads and refuses bad values; a 1-minute focus took 60.01 s and counted one session; no script errors. Two checks failed first because my own test had a focus session running, so the command bar rightly offered "Stop focus"; they pass with none running.
+
+**Left alone, on purpose:** Claude chat with no key still fails with a general message instead of "add your key". The Claude library can also sign in through a saved profile, and I couldn't tell the two apart safely, so I left it rather than risk blocking a working setup.
+
+**Not tested yet:** the app with the internet really cut (the offline paths were tested by simulating a dead connection); the recap arriving by itself in the real app (there's no focus history from last week on this PC); a real power cut during a save.
