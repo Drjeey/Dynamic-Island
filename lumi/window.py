@@ -12,6 +12,7 @@ from pathlib import Path
 
 import webview
 
+from . import bridge
 from .api import IslandAPI, SettingsAPI
 from .activity import ActivityBus
 from .agents import AgentManager
@@ -531,6 +532,7 @@ class IslandController:
 
         geo = self.config['geometry']
         free = self.config.get('anchor') == 'free'
+        bridge.harden()  # before any window exists: the bridge only takes public method names, on Lumi's own pages
         # easy_drag would make any press-and-drag move the window, even selecting text; the page marks what drags it
         # transparent=True alone leaves a grey background on Windows; see _on_shown
         self.window = webview.create_window(

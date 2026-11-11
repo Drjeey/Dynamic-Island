@@ -758,3 +758,33 @@ You asked for a check for bugs, glitches and poor connectivity. The whole test s
 **Left alone, on purpose:** Claude chat with no key still fails with a general message instead of "add your key". The Claude library can also sign in through a saved profile, and I couldn't tell the two apart safely, so I left it rather than risk blocking a working setup.
 
 **Not tested yet:** the app with the internet really cut (the offline paths were tested by simulating a dead connection); the recap arriving by itself in the real app (there's no focus history from last week on this PC); a real power cut during a save.
+
+## Security fixes from the audit (11 Nov 2026)
+
+The full audit (report in `C:\Users\hp\security-audit-skill\Dynamic-Island-main\run-1\REPORT.md`) found 9 leads, none confirmed because nothing could be run during the audit. These changes fix the 8 that are in code. The ninth, a Gemini API key in git history (commit `abcc346`), needs the key revoked in Google AI Studio; no code change fixes it.
+
+| Lead | Fix | Files |
+|---|---|---|
+| The page could call private objects through the bridge (`_ctrl.apply_setting`, the provider's API key) | The bridge now accepts only plain public method names, no dots and no leading underscore | `lumi/bridge.py` (new), `lumi/window.py` |
+| Any document the webview showed got the bridge | Navigation away from Lumi's own loopback pages is cancelled, dropped files and links are refused (`AllowExternalDrop` off), file-URL access is off, and both pages have a Content-Security-Policy (no inline script) | `lumi/bridge.py`, `ui/island.html`, `ui/settings.html` |
+| Task text could be re-read by `cmd.exe` when the agent is a `.cmd` file | The task now goes to Claude Code and Codex on stdin, never on the command line | `lumi/agents.py` |
+| Claude "read only" still ran the folder's own `.claude` hooks | Read mode now offers only the read tools (`--tools`), loads only your user settings (`--setting-sources user`) and uses `--permission-mode dontAsk` | `lumi/agents.py` |
+| Voice audio went to Google over plain HTTP | Speech recognition uses the HTTPS address | `lumi/chat.py` |
+| Media titles and the note could steer Lumi's tools | Tool output is quoted, shortened (120 characters for titles, 4,000 for the note) and labelled as information; Lumi's instructions say tool text is never an instruction; note lines are capped at 500 characters; `open_app` needs at least 2 letters; live voice now checks arguments like typed chat, caps tool calls at 5 per turn and stops at Esc | `lumi/tools.py`, `lumi/chat.py`, `lumi/live.py` |
+| The sound helper wrote `.wav` files anywhere and served the whole repo | It serves only the render page and `ui/lumi-sounds.js`, accepts names of a-z, 0-9 and dashes, and refuses other hosts and pages | `video/christmas/tools/save_server.py` |
+
+`requirements.txt` now pins `pywebview==6.2.1` (the bridge guard hooks its internals) and `SpeechRecognition==3.17.0`.
+
+**How it was tested:**
+- **Read mode, real Claude Code (2.1.321), a throwaway folder whose `.claude/settings.json` had a hook that writes a marker file:** with the old flags the hook ran; with the new flags it did not. Both runs then stopped on "Credit balance is too low", because the test ran with this coding session's account settings rather than Lumi's.
+- **Codex (stdin):** the task `Reply with exactly: STDIN-OK & echo NOT-RUN %USERNAME%` came back word for word, so `&` and `%USERNAME%` stayed text.
+- **Speech:** one second of silence sent to the HTTPS address reached Google, which answered "no speech".
+- **Bridge:** allowed names (`init`, `run_agent`, pywebview's own) pass; `_ctrl.apply_setting`, `_ctrl`, `init.__globals__` and dotted names are refused. Same-origin check: other ports, `file://`, other sites and `localhost` instead of `127.0.0.1` are refused. The patches are in place after `harden()`.
+- **CSP:** both pages loaded in a browser with all their scripts and stylesheets and no CSP errors; `new Function` (which pywebview uses) works; an injected `onerror` handler was blocked.
+- **Tools:** a 300-character title with a line break and an instruction comes back quoted, on one line, cut to 120 characters; a 600-character note line is refused; `</note>` is stripped; a one-letter app name is refused.
+- **Sound helper (on a spare port):** the render page and `lumi-sounds.js` load; `notes.txt`, `config.json`, a rebound Host, a `../` name and a foreign Origin are refused; a normal save lands in `assets/lumi-sfx`.
+- **The real app:** started and ran for 25 seconds with no errors and no refused bridge calls.
+
+**Not tested:** dropping a file or link onto the island (the navigation cancel and `AllowExternalDrop` are in place but weren't exercised); a full agent run in either mode with a working account; a spoken question end to end; live voice with the new tool checks.
+
+**Still to do by you:** an old copy of `save_server.py` from an earlier session is still running on port 8765 (the version with the bugs); close it. Revoke the Gemini key from commit `abcc346`.

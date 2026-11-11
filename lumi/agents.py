@@ -408,12 +408,22 @@ class AgentManager:
             if self._starting or working:
                 return f'{AGENTS[self._starting or working]} is still working. Stop it first.'
             self._starting = agent
+        # The task goes in on stdin, never on the command line: a launcher that is a .cmd file (an npm install) is run
+        # by cmd.exe, which would treat & | < > ^ and %NAME% in the task as commands and variables
         if agent == 'claude':
             args = [exe, '-p', '--output-format', 'stream-json', '--verbose']
-            args += ['--permission-mode', 'acceptEdits'] if mode == 'edit' else ['--allowedTools', 'Read Grep Glob WebSearch WebFetch']
+            if mode == 'edit':
+                args += ['--permission-mode', 'acceptEdits']
+            else:
+                # "Read only" has to hold for a folder you don't trust: only the read tools exist, they need no asking,
+                # and the folder's own .claude settings (permission rules, hooks) are not loaded. Headless runs skip
+                # the workspace trust prompt, so nothing else would stop them.
+                read_tools = 'Read,Grep,Glob,WebSearch,WebFetch'
+                args += ['--tools', read_tools, '--allowedTools', read_tools, '--setting-sources', 'user',
+                         '--permission-mode', 'dontAsk']
         else:
-            args = [exe, 'exec', '--json', '--skip-git-repo-check', '-s', 'workspace-write' if mode == 'edit' else 'read-only']
-        args += ['--', prompt]  # after "--", a task that starts with a dash is still a task, not an option
+            args = [exe, 'exec', '--json', '--skip-git-repo-check', '-s', 'workspace-write' if mode == 'edit' else 'read-only',
+                    '-']  # "-": read the task from stdin
         # Lumi may itself be started from inside an agent session; its markers must not leak into the child
         env = {k: v for k, v in os.environ.items() if not (k.startswith('CLAUDE_CODE_') or k in ('CLAUDECODE', 'CLAUDE_PID'))}
         if 'CLAUDECODE' in os.environ:
@@ -421,8 +431,14 @@ class AgentManager:
             # session, and would send the agent there instead of to your own login
             env = {k: v for k, v in env.items() if not (k.startswith('CLAUDE_AGENT_SDK_') or k in HOST_ONLY_ENV)}
         try:
-            proc = subprocess.Popen(args, cwd=str(folder), env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            proc = subprocess.Popen(args, cwd=str(folder), env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
+            try:
+                proc.stdin.write(prompt.encode('utf-8'))
+                proc.stdin.close()  # end of the task; the agent reads it and starts
+            except OSError:
+                proc.kill()  # it exited before reading the task; don't leave it running
+                raise
         except OSError as e:
             with self._lock:
                 self._starting = None

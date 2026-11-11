@@ -46,7 +46,8 @@ def _whom(config, provider):
     return PROVIDERS[provider]['label']
 
 class IslandAPI:
-    """Methods the island page can call. Underscore names keep pywebview from exposing (and recursively scanning) them."""
+    """Methods the island page can call. Underscore names keep pywebview from listing (and recursively scanning) them;
+    lumi/bridge.py is what stops the page from calling them anyway."""
 
     def __init__(self, controller):
         self._ctrl = controller
@@ -258,7 +259,8 @@ PREVIEWS = {
 
 
 class SettingsAPI:
-    """Methods the settings window can call. The API key can be saved or removed, but never read back."""
+    """Methods the settings window can call. The API key can be saved or removed, but never read back
+    (lumi/bridge.py refuses calls into self._ctrl, where the provider and its key live)."""
 
     def __init__(self, controller):
         self._ctrl = controller
