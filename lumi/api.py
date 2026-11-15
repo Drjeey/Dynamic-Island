@@ -1,4 +1,5 @@
 import os
+import subprocess
 import threading
 from datetime import datetime
 from urllib.parse import quote_plus
@@ -9,8 +10,9 @@ import webview
 
 from . import credentials, providers
 from .agents import AGENTS
-from .config import EDITABLE, LIVE_VOICE_NOTICE, LUMI_COLORS, NOTES_PATH, SKINS, VOICE_NOTICE
+from .config import EDITABLE, LIVE_VOICE_NOTICE, LUMI_COLORS, NATURAL_VOICE_NOTICE, NOTES_PATH, SKINS, VOICE_NOTICE
 from .providers import PROVIDERS
+from .speech import VOICES
 from .system import SystemHelpers, Volume
 
 # Command-bar keywords, matched on the first word as you type
@@ -19,6 +21,7 @@ COMMANDS = [
     ('break', 'Take a 5-minute break', 'hourglass'),
     ('note', 'Add to your note', 'note'),
     ('chat', 'Chat with Lumi', 'lumi'),
+    ('talk', 'Talk to Lumi', 'mic'),
     ('summary', 'Show your focus summary', 'hourglass'),
     ('play', 'Play or pause', 'playpause'),
     ('pause', 'Play or pause', 'playpause'),
@@ -31,6 +34,30 @@ COMMANDS = [
     ('settings', 'Open Settings', 'settings'),
     ('quit', 'Quit Lumi Island', 'power'),
 ]
+# Lumi's guides (their steps are in ui/lumi-guides.js): id, title, and words that find one in the command bar
+GUIDES = [
+    ('start', 'Getting started', 'start begin basics island shortcut hotkey'),
+    ('ask', 'Asking Lumi', 'ask chat talk voice mic question speak'),
+    ('command', 'The command bar', 'command bar search launcher shortcut hotkey apps'),
+    ('dashboard', 'Your PC at a glance', 'dashboard pc memory battery network stats'),
+    ('focus', 'Focus sessions', 'focus timer break pomodoro summary'),
+    ('notes', 'Your quick note', 'note notes notepad'),
+    ('music', 'Music', 'music media song player volume'),
+    ('agents', 'Coding agents', 'agents agent claude codex code coding'),
+    ('looks', "Lumi's looks and sounds", 'looks skin skins colour color christmas seasonal sound sounds'),
+    ('menu', 'The menu', 'menu settings hide quit'),
+]
+GUIDE_IDS = {g[0] for g in GUIDES}
+GUIDE_WORDS = {'guide', 'guides', 'tour', 'tours', 'tutorial', 'tutorials', 'help'}
+
+
+def guide_results(rest):
+    """Command-bar results for "guide [topic]": every guide, or the ones whose title or words match."""
+    words = [w for w in rest.lower().split() if w not in ('a', 'the', 'to', 'on', 'for', 'me', 'with', 'how', 'use')]
+    matches = [g for g in GUIDES if all(w in (g[1].lower() + ' ' + g[2]) for w in words)] if words else GUIDES
+    return [{'kind': 'command', 'id': 'guide', 'arg': g[0], 'title': f'Guide: {g[1]}', 'glyph': 'list'} for g in matches]
+
+
 # A query starting with one of these (or ending in "?") is probably meant for Lumi
 QUESTION_WORDS = {'what', 'why', 'how', 'who', 'when', 'where', 'which', 'is', 'are', 'can', 'could', 'should',
                   'would', 'do', 'does', 'tell', 'explain', 'write', 'help', 'give', 'summarise', 'summarize',
@@ -56,7 +83,25 @@ class IslandAPI:
     def init(self):
         c = self._ctrl
         return {'prefs': c.prefs(), 'onboarding': not c.config.get('onboarding_done'), 'media': c.media.state, 'agents': c.agents.state(),
-                'hotkey_error': c.hotkey_error, 'greeting': self._daily_greeting(), 'offer_sounds': self._offer_sounds()}
+                'hotkey_error': c.hotkey_error, 'greeting': self._daily_greeting(), 'offer_sounds': self._offer_sounds(),
+                'guides': self._guides_state()}
+
+    # --- guides ---
+    def _guides_state(self):
+        c = self._ctrl.config
+        return {'seen': list(c.get('guides_seen') or []), 'offered': list(c.get('guides_offered') or [])}
+
+    def mark_guide(self, guide_id, what):
+        """Remembers that a guide was finished ('seen') or offered on first use ('offered')."""
+        key = {'seen': 'guides_seen', 'offered': 'guides_offered'}.get(what)
+        if guide_id not in GUIDE_IDS or not key:
+            return None
+        c = self._ctrl.config
+        done = [g for g in (c.get(key) or []) if g in GUIDE_IDS]
+        if guide_id not in done:
+            c[key] = done + [guide_id]
+            c.save()
+        return self._guides_state()
 
     def _offer_sounds(self):
         # Lumi asks once whether it may make sounds, never during the first-run tour; asking counts, answered or not
@@ -137,7 +182,8 @@ class IslandAPI:
             # First use: say where the audio goes before the mic ever opens
             c.config[seen_key] = True
             c.config.save()
-            notice = LIVE_VOICE_NOTICE if live else VOICE_NOTICE.format(provider=_whom(c.config, provider))
+            spoken = NATURAL_VOICE_NOTICE if c.config.get('voice_engine') == 'natural' else ''
+            notice = LIVE_VOICE_NOTICE if live else VOICE_NOTICE.format(provider=_whom(c.config, provider), spoken=spoken)
             c.push('idle', {'status': 'notice', 'text': notice})
             return
         if live:
@@ -145,15 +191,44 @@ class IslandAPI:
         else:
             threading.Thread(target=c.chat().listen_and_respond, daemon=True).start()
 
+    def speech_done(self, speech_id):
+        """The page finished playing (or couldn't play) Lumi's natural voice."""
+        chat = self._ctrl._chat
+        if chat: chat.speech_done(speech_id)
+
     def ask(self, text):
         """Typed chat: returns {'reply': ...} or {'error': ...}; Lumi may act on the island before replying."""
         return self._ctrl.chat().ask(text)
 
     # --- Claude Code and Codex ---
-    def run_agent(self, agent, prompt, cwd, mode='edit'):
-        """Returns {'ok': True} or {'error': ...}."""
-        error = self._ctrl.agents.run(agent, prompt, cwd, 'read' if mode == 'read' else 'edit')
+    def run_agent(self, agent, prompt, cwd, mode='read', continue_id=None, confirmed=False):
+        """Returns {'ok': True}, {'error': ...}, or {'confirm': True} when an edit run in a new folder needs a yes
+        first. continue_id: the island session to continue, for a reply."""
+        error = self._ctrl.agents.run(agent, prompt, cwd, 'edit' if mode == 'edit' else 'read',
+                                      continue_id=str(continue_id) if continue_id else None, confirmed=confirmed is True)
+        if error == 'CONFIRM_EDIT':
+            return {'ok': False, 'confirm': True}
         return {'ok': error is None, 'error': error}
+    def show_agent_chat(self, session_id):
+        """Opens File Explorer at the file the agent saved the chat to."""
+        path = self._ctrl.agents.chat_file(session_id)
+        if not path:
+            return {'error': "Couldn't find where that chat was saved."}
+        subprocess.Popen(['explorer', f'/select,{path}'])
+        return {'ok': True}
+    def copy_agent_resume(self, session_id):
+        """Copies the command that picks the chat up in a terminal."""
+        command = self._ctrl.agents.resume_command(session_id)
+        if not command:
+            return {'error': "That chat has no id to resume yet."}
+        import win32clipboard
+        win32clipboard.OpenClipboard()
+        try:
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardText(command, win32clipboard.CF_UNICODETEXT)
+        finally:
+            win32clipboard.CloseClipboard()
+        return {'ok': True, 'command': command}
     def stop_agent(self): return self._ctrl.agents.stop()
     def choose_folder(self):
         start = self._ctrl.config.get('agent_cwd') or str(Path.home())
@@ -167,6 +242,11 @@ class IslandAPI:
             return {'pins': self._ctrl.apps.pins(), 'results': []}
         results = []
         first, _, rest = q.partition(' ')
+        if first.lower() in GUIDE_WORDS and (first.lower() != 'help' or not rest):
+            # "guide", "guide focus", "tour agents", "help": Lumi's guides (help with more words is a question)
+            found = guide_results(rest)
+            if found:
+                return {'pins': [], 'results': found}
         for word, title, icon in COMMANDS:
             if not word.startswith(first.lower()) or (rest and first.lower() != word):
                 continue
@@ -225,6 +305,8 @@ class IslandAPI:
                 return 'Added to your note'
             if ident == 'open_note': threading.Timer(0.3, self.open_notes).start(); return None
             if ident == 'chat': threading.Timer(0.3, self.open_chat).start(); return None
+            if ident == 'guide' and arg in GUIDE_IDS: threading.Timer(0.4, c.push, args=('guide', {'id': arg})).start(); return None
+            if ident == 'talk': threading.Timer(0.4, self.start_listening).start(); return None
             if ident == 'summary': threading.Timer(0.3, c.offer_weekly_summary, kwargs={'force': True}).start(); return None
             if ident in ('play', 'pause'): c.media.control('play'); return None
             if ident == 'next': c.media.control('next'); return None
@@ -234,8 +316,10 @@ class IslandAPI:
                 # Straight to work in the last folder; with no folder yet, the panel opens with the task filled in
                 cwd = c.config.get('agent_cwd')
                 if cwd and Path(cwd).is_dir():  # Path('') is the current folder, so an empty setting must not get this far
-                    error = c.agents.run(arg['agent'], arg['prompt'], cwd, c.config.get('agent_mode', 'edit'))
-                    return error or f'{AGENTS[arg["agent"]]} started'
+                    error = c.agents.run(arg['agent'], arg['prompt'], cwd, 'read')  # edits are chosen in the panel, per task
+                    if error != 'CONFIRM_EDIT':
+                        return error or f'{AGENTS[arg["agent"]]} started'
+                    # An edit run in a folder you haven't OK'd yet: the panel opens with the task, to confirm there
                 threading.Timer(0.3, self.open_agents, kwargs=arg).start(); return None
             if ident == 'agents': threading.Timer(0.3, self.open_agents, kwargs=arg or {}).start(); return None
             if ident == 'settings': c.open_settings(); return None
@@ -271,7 +355,7 @@ class SettingsAPI:
         keys = {name: {'set': credentials.has_stored_key(name), 'from_env': credentials.key_from_environment(name),
                        'env': credentials.ENVIRONMENT.get(name)} for name in PROVIDERS}
         return {'values': values, 'monitors': c.monitor_names(), 'hotkey_error': c.hotkey_error, 'colors': LUMI_COLORS,
-                'skins': SKINS, 'providers': PROVIDERS, 'keys': keys}
+                'skins': SKINS, 'voices': VOICES, 'providers': PROVIDERS, 'keys': keys}
 
     def set(self, key, value):
         if key not in EDITABLE:
@@ -300,6 +384,16 @@ class SettingsAPI:
         return {'ok': error is None, 'error': error}
 
     def replay_tour(self): self._ctrl.push('onboard', {})
+    def guides(self):
+        seen = set(self._ctrl.config.get('guides_seen') or [])
+        return [{'id': g[0], 'title': g[1], 'seen': g[0] in seen} for g in GUIDES]
+    def start_guide(self, guide_id):
+        if guide_id in GUIDE_IDS:
+            self._ctrl.push('guide', {'id': guide_id})
+
+    def test_voice(self):
+        """Says a line in the chosen voice, so you can hear it from Settings."""
+        threading.Thread(target=lambda: self._ctrl.chat().speak("Hi, I'm Lumi. This is how I sound."), daemon=True).start()
 
     def preview(self, name):
         """Plays a reaction, working state or mood on the real Lumi for a few seconds."""

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lumi showcase panels</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The real skin art and shapes, loaded from the app itself so Lumi is identical everywhere -->
+<link rel="stylesheet" href="../../ui/lumi-skins.css">
+<script src="../../ui/lumi-skins.js"></script>
+<style>
+:root {
+  --peach:#FFD9C4; --cloud:#F2F2F7; --mint:#C9F0DA; --sky:#CFE2FF; --lilac:#E2D6FF; --butter:#FFF0B8;
+  --ink:#1C1C1E; --grey:#6B6B73; --blue:#4C8DFF; --green:#34C77B; --amber:#F5B83D; --violet:#B98CFF; --red:#FF5A4F; --blush:#FF8FA3;
+  --island:#0B0B0D; --tile:#18181C;
+  --font:"Segoe UI Variable Display","Segoe UI",Inter,"Helvetica Neue",Arial,sans-serif;
+}
+* { box-sizing:border-box; margin:0; }
+html,body { background:#D8D6D2; font-family:var(--font); color:var(--ink); }
+body { padding:40px; display:grid; grid-template-columns:repeat(3,645px); gap:40px; justify-content:center; }
+body.single { padding:0; display:block; background:transparent; }
+body.single .panel:not(.show) { display:none; }
+
+.panel { width:645px; height:1398px; border-radius:64px; position:relative; overflow:hidden; padding:84px 60px 0; }
+.panel h1 { font-size:104px; line-height:.96; letter-spacing:-.045em; font-weight:800; }
+.panel h1 em { font-style:normal; }
+.panel .sub { margin-top:30px; font-size:31px; line-height:1.3; color:var(--grey); font-weight:500; max-width:500px; letter-spacing:-.01em; }
+.dark { color:#fff; } .dark .sub { color:#A3A3AD; }
+
+/* Lumi, scaled with zoom so skin shapes and shading scale with it */
+.lumi { position:absolute; width:60px; height:50px; --body:#FFD9C4; --eye:#1C1C1E; }
+.lumi .lumi-shape { position:absolute; inset:0; }
+.lumi svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.eye-open { fill:var(--eye); } .eye-glint { fill:#fff; opacity:.9; }
+.eye-happy,.eye-closed { fill:none; stroke:var(--eye); stroke-width:2.4; stroke-linecap:round; opacity:0; }
+.lumi.happy .eye-open,.lumi.happy .eye-glint { opacity:0; } .lumi.happy .eye-happy { opacity:1; }
+.lumi.sleepy .eye-open,.lumi.sleepy .eye-glint { opacity:0; } .lumi.sleepy .eye-closed { opacity:1; }
+.lumi.wide .eye-g { transform-box:fill-box; transform-origin:center; transform:scale(1.15); }
+.lumi.focus .eye-g { transform-box:fill-box; transform-origin:center; transform:scaleY(.62); }
+.lumi.focus .eye-glint { opacity:0; }
+.lumi.down #lumi-eyes { transform:translate(0,2px); }
+.mouth { fill:var(--eye); opacity:0; }
+.lumi.talk .mouth { opacity:1; }
+.cheeks ellipse { fill:#FF8FA3; opacity:.3; } .lumi.happy .cheeks ellipse { opacity:.55; }
+[data-skin="robot"] .cheeks ellipse,[data-skin="pixel"] .cheeks ellipse,[data-skin="hologram"] .cheeks ellipse,[data-skin="star"] .cheeks ellipse { opacity:0 !important; }
+.glasses { opacity:0; } .lumi.glasses-on .glasses { opacity:1; }
+.glasses .lens { fill:rgba(207,226,255,.28); stroke:var(--eye); stroke-width:1.7; }
+.glasses .bridge,.glasses .temple { fill:none; stroke:var(--eye); stroke-width:1.7; stroke-linecap:round; }
+.glasses .shine { fill:none; stroke:#fff; stroke-width:1.1; stroke-linecap:round; opacity:.7; }
+.lumi.ring .lumi-shape { box-shadow:var(--shade),0 0 0 10px rgba(76,141,255,.35),0 0 0 22px rgba(76,141,255,.16); }
+.lumi.floaty { filter:drop-shadow(0 22px 20px rgba(60,30,10,.22)); }
+
+.pill { position:absolute; background:var(--island); border-radius:999px; color:#F2F2F5; font-weight:600; display:flex; align-items:center; gap:14px; }
+.chip { display:inline-flex; align-items:center; background:#fff; color:var(--ink); border-radius:999px; padding:14px 26px; font-size:26px; font-weight:600; box-shadow:0 8px 22px rgba(0,0,0,.08); }
+.dark .chip { background:#26262C; color:#F2F2F5; box-shadow:none; }
+.dot { width:14px; height:14px; border-radius:50%; background:var(--blue); display:inline-block; }
+
+/* 1 hero */
+.p1 { background:var(--cloud); }
+.p1 h1 em { background:linear-gradient(90deg,#FF9F7A,#F5B83D); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.rings { position:absolute; left:50%; bottom:-380px; width:1100px; height:1100px; transform:translateX(-50%); border-radius:50%;
+  background:repeating-radial-gradient(circle,var(--peach) 0 56px,#FFE9DC 56px 112px); opacity:.85; }
+/* 2 ask */
+.p2 { background:#141417; }
+.p2 h1 em { color:var(--blue); }
+.bubble { position:absolute; border-radius:34px; padding:26px 34px; font-size:31px; font-weight:600; line-height:1.25; }
+.b-user { background:#26262C; color:#F2F2F5; right:56px; border-bottom-right-radius:10px; }
+.b-lumi { background:var(--blue); color:#fff; left:56px; border-bottom-left-radius:10px; }
+/* 3 focus */
+.p3 { background:var(--butter); }
+.p3 h1 em { color:#E39A12; }
+.timer { position:absolute; left:50%; transform:translateX(-50%); }
+/* 4 agents */
+.p4 { background:var(--cloud); }
+.p4 h1 em { background:linear-gradient(90deg,var(--blue),var(--violet)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.node { position:absolute; left:60px; right:60px; height:92px; border-radius:28px; background:#fff; box-shadow:0 8px 22px rgba(0,0,0,.07); display:flex; align-items:center; gap:22px; padding:0 30px; font-size:30px; font-weight:600; color:#A3A3AD; }
+.node i { width:22px; height:22px; border-radius:50%; background:#C9C9D1; flex:none; }
+.node.active { background:var(--island); color:#F2F2F5; } .node.active i { background:var(--blue); box-shadow:0 0 0 8px rgba(76,141,255,.3); }
+.node.done { color:#6B6B73; } .node.done i { background:var(--green); }
+.vline { position:absolute; left:81px; width:4px; background:#D0D0D8; border-radius:2px; }
+/* 5 wardrobe */
+.p5 { background:var(--lilac); }
+.p5 h1 em { color:#8D5CF0; }
+.tile { position:absolute; width:162px; height:178px; border-radius:36px; background:rgba(255,255,255,.62); }
+.tile span { position:absolute; bottom:12px; width:100%; text-align:center; font-size:21px; font-weight:600; color:#5A4A7A; }
+/* 6 festive */
+.p6 { background:var(--mint); }
+.p6 h1 em { background:linear-gradient(90deg,#E0453A,#2E8B57); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.snow { position:absolute; border-radius:50%; background:#fff; }
+.ground { position:absolute; left:-40px; right:-40px; bottom:-60px; height:380px; border-radius:50% 50% 0 0; background:#F7FBFF; }
+</style>
+</head>
+<body>
+
+<section class="panel p1" id="p1">
+  <h1>Meet<br><em>Lumi.</em></h1>
+  <p class="sub">A tiny AI pet that lives in your Dynamic Island.</p>
+  <div class="rings"></div>
+  <div class="pill" style="left:50%;transform:translateX(-50%);top:560px;width:300px;height:76px;padding:0 24px;justify-content:space-between"><span style="font-size:22px;color:#A3A3AD">Lumi</span><span class="dot" style="background:var(--green)"></span></div>
+  <div data-lumi='{"skin":"classic","face":"happy","size":5.4,"x":322,"y":960,"floaty":1}'></div>
+</section>
+
+<section class="panel p2 dark" id="p2">
+  <h1>Just<br><em>ask.</em></h1>
+  <p class="sub">Type or talk. Lumi can do things, too.</p>
+  <div class="bubble b-user" style="top:520px">Focus for 45 minutes</div>
+  <div class="bubble b-lumi" style="top:640px;top:652px">Done. 45 minutes, starting now.</div>
+  <div class="bubble b-user" style="top:790px">Pause the music</div>
+  <div data-lumi='{"skin":"classic","mood":"listening","face":"wide","size":3.6,"x":322,"y":1070,"ring":1}'></div>
+  <div style="position:absolute;left:0;right:0;bottom:70px;display:flex;gap:16px;justify-content:center"><span class="chip">Add to my note</span><span class="chip">Open Calculator</span></div>
+</section>
+
+<section class="panel p3" id="p3">
+  <h1>Stay in<br>the <em>zone.</em></h1>
+  <p class="sub">Focus sessions, breaks, and today's total.</p>
+  <div class="pill" style="left:50%;transform:translateX(-50%);top:560px;width:400px;height:88px;padding:0 30px;font-size:34px;justify-content:space-between"><span class="dot" style="background:var(--amber);width:18px;height:18px"></span><span>Focus</span><span style="font-variant-numeric:tabular-nums">24:10</span></div>
+  <div data-lumi='{"skin":"classic","mood":"focus","face":"focus","size":4.2,"x":322,"y":930,"floaty":1}'></div>
+  <div style="position:absolute;left:0;right:0;bottom:80px;display:flex;gap:14px;justify-content:center"><span class="chip">15</span><span class="chip">25</span><span class="chip" style="background:var(--ink);color:#fff">45</span><span class="chip">60</span><span class="chip" style="font-size:22px">min</span></div>
+</section>
+
+<section class="panel p4" id="p4">
+  <h1>Give<br>agents<br>a <em>job.</em></h1>
+  <p class="sub">Run Claude Code or Codex from the island and watch every step.</p>
+  <div class="vline" style="top:646px;height:330px"></div>
+  <div class="node done" style="top:620px"><i></i>Reading api.py</div>
+  <div class="node done" style="top:730px"><i></i>Running the tests</div>
+  <div class="node active" style="top:840px"><i></i>Editing window.py ×3</div>
+  <div class="node" style="top:950px"><i></i>Done</div>
+  <div data-lumi='{"skin":"classic","mood":"coding","face":"open","glasses":1,"down":1,"size":3.2,"x":322,"y":1215,"floaty":1}'></div>
+</section>
+
+<section class="panel p5" id="p5">
+  <h1>Dress<br>Lumi <em>up.</em></h1>
+  <p class="sub">Same face. New body. Change by hand or follow the seasons.</p>
+  <div id="grid5"></div>
+</section>
+
+<section class="panel p6" id="p6">
+  <h1>Festive<br><em>Lumi.</em></h1>
+  <p class="sub">A new Christmas skin every day.</p>
+  <div class="ground"></div>
+  <div id="snow6"></div>
+  <div data-lumi='{"skin":"santa","face":"happy","size":4.4,"x":322,"y":880,"floaty":1}'></div>
+  <div id="row6"></div>
+</section>
+
+<script>
+const COLORS = {
+  classic:'#FFD9C4', cat:'#F4B183', bunny:'#F1ECF6', bear:'#CDA782', robot:'#BFD0DE', pixel:'#9FE3A2', hologram:'#7FE9E2',
+  cloud:'#E6F0FF', slime:'#A5E57C', sprout:'#EADBB8', santa:'#FBEFE6', reindeer:'#A9805E', snowman:'#F7FBFF', gingerbread:'#C9874F',
+  elf:'#FFE0C7', star:'#FFD45C', jumper:'#FFE7D1', pumpkin:'#F6A23F', party:'#FFD7E8'
+};
+const MOODS = { listening:'#4C8DFF', speaking:'#34C77B', focus:'#F5B83D', music:'#B98CFF' };
+
+/* Same markup as #lumi-face in ui/island.html */
+function lumiMarkup(skin){
+  const g = (skin==='classic') ? '' : (LUMI_SKIN_ART[skin]||'');
+  return `<div class="lumi-shape"><svg viewBox="0 0 60 50"><g>${g}</g>
+  <g id="lumi-eyes"><g class="eye-g"><rect class="eye-open" x="17" y="15" width="8" height="12" rx="4"/><circle class="eye-glint" cx="22.4" cy="17.8" r="1.6"/><circle class="eye-glint" cx="19.3" cy="23.6" r=".75"/><path class="eye-happy" d="M16.5 23 Q21 16.5 25.5 23"/><path class="eye-closed" d="M16.5 21.5 Q21 25 25.5 21.5"/></g>
+  <g class="eye-g"><rect class="eye-open" x="35" y="15" width="8" height="12" rx="4"/><circle class="eye-glint" cx="40.4" cy="17.8" r="1.6"/><circle class="eye-glint" cx="37.3" cy="23.6" r=".75"/><path class="eye-happy" d="M34.5 23 Q39 16.5 43.5 23"/><path class="eye-closed" d="M34.5 21.5 Q39 25 43.5 21.5"/></g></g>
+  <ellipse class="mouth" cx="30" cy="34" rx="3.2" ry="2.4"/>
+  <g class="cheeks"><ellipse cx="13" cy="30" rx="3.2" ry="1.9"/><ellipse cx="47" cy="30" rx="3.2" ry="1.9"/></g>
+  <g class="glasses"><path class="temple" d="M13.6 19.5 6.5 16.5M46.4 19.5 53.5 16.5"/><path class="bridge" d="M28.4 20.6q1.6-1.6 3.2 0"/><circle class="lens" cx="21" cy="21" r="7.4"/><circle class="lens" cx="39" cy="21" r="7.4"/><path class="shine" d="M16.6 18.2q1.4-2.4 4-2.8M34.6 18.2q1.4-2.4 4-2.8"/></g>
+  </svg></div>`;
+}
+function mount(el, o){
+  const d = document.createElement('div');
+  d.className = 'lumi ' + [o.face, o.glasses?'glasses-on':'', o.down?'down':'', o.ring?'ring':'', o.floaty?'floaty':''].join(' ');
+  d.dataset.skin = o.skin;
+  d.style.setProperty('--body', MOODS[o.mood] || COLORS[o.skin]);
+  d.style.left = (o.x/o.size - 30) + 'px'; d.style.top = (o.y/o.size - 25) + 'px'; d.style.zoom = o.size;
+  d.innerHTML = lumiMarkup(o.skin);
+  el.replaceWith(d); return d;
+}
+document.querySelectorAll('[data-lumi]').forEach(el => mount(el, JSON.parse(el.dataset.lumi)));
+
+/* Panel 5: the wardrobe grid */
+const g5 = document.getElementById('grid5'), p5 = document.getElementById('p5');
+const skins5 = [['cat','Cat'],['bunny','Bunny'],['bear','Bear'],['robot','Robot'],['slime','Slime'],['sprout','Sprout'],['cloud','Cloud'],['pumpkin','Pumpkin'],['party','Party']];
+skins5.forEach(([s,n],i)=>{
+  const x = 60 + (i%3)*174, y = 660 + Math.floor(i/3)*198;
+  const t = document.createElement('div'); t.className='tile'; t.style.left=x+'px'; t.style.top=y+'px'; t.innerHTML=`<span>${n}</span>`; p5.appendChild(t);
+  const ph = document.createElement('div'); p5.appendChild(ph);
+  mount(ph,{skin:s,face:'open',size:1.75,x:x+81,y:y+78});
+});
+/* Panel 6: the seven Christmas skins, as a row */
+const p6 = document.getElementById('p6');
+['star','santa','reindeer','snowman','gingerbread','elf','jumper'].forEach((s,i)=>{
+  const ph=document.createElement('div'); p6.appendChild(ph);
+  mount(ph,{skin:s,face:i%2?'happy':'open',size:1.05,x:86+i*79,y:1262});
+});
+/* a little snow, fixed positions (no randomness) */
+const snow=document.getElementById('snow6');
+[[70,640,14],[150,720,9],[260,610,11],[420,700,16],[520,640,10],[580,800,13],[60,860,10],[480,980,9],[130,1000,12],[560,1060,8]].forEach(([x,y,r])=>{
+  const s=document.createElement('i'); s.className='snow'; s.style.cssText=`left:${x}px;top:${y}px;width:${r}px;height:${r}px;opacity:.9`; snow.appendChild(s);
+});
+
+/* ?p=3 shows just panel 3, for rendering */
+const q = new URLSearchParams(location.search).get('p');
+if (q){ document.body.classList.add('single'); document.getElementById('p'+q).classList.add('show'); }
+</script>
+</body>
+</html>

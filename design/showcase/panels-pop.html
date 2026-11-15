@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lumi pop panels</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Real skin art from the app; the pop styling is on the cards and backgrounds, never on Lumi -->
+<link rel="stylesheet" href="../../ui/lumi-skins.css">
+<script src="../../ui/lumi-skins.js"></script>
+<style>
+:root {
+  --ink:#141414; --cream:#FFF6E3; --green:#52C24A; --red:#E8392B; --yellow:#FFD81A; --blue:#1E8BFF; --purple:#8B2BE2; --orange:#FF6A00; --pink:#FF9BC8;
+  --font:"Segoe UI Black","Arial Black","Segoe UI Variable Display","Segoe UI",Arial,sans-serif;
+}
+* { box-sizing:border-box; margin:0; }
+html,body { background:#CFCBC4; font-family:var(--font); color:var(--ink); }
+body { padding:40px; display:grid; grid-template-columns:repeat(3,645px); gap:40px; justify-content:center; }
+body.single { padding:0; display:block; background:transparent; }
+body.single .panel:not(.show) { display:none; }
+.panel { width:645px; height:1398px; border-radius:64px; position:relative; overflow:hidden; padding:80px 52px 0; }
+h1 { font-weight:900; font-size:98px; line-height:.9; letter-spacing:-.04em; text-transform:uppercase; }
+.sub { margin-top:26px; font:700 30px/1.25 "Segoe UI","Arial",sans-serif; max-width:520px; }
+.card { border:5px solid var(--ink); box-shadow:9px 9px 0 var(--ink); border-radius:36px; background:var(--cream); }
+.sticker { display:inline-block; background:var(--ink); color:#fff; border-radius:999px; padding:10px 24px; font:800 24px "Segoe UI",Arial,sans-serif; letter-spacing:.02em; }
+
+.lumi { position:absolute; width:60px; height:50px; --body:#FFD9C4; --eye:#1C1C1E; }
+.lumi .lumi-shape { position:absolute; inset:0; }
+.lumi svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.eye-open { fill:var(--eye); } .eye-glint { fill:#fff; opacity:.9; }
+.eye-happy,.eye-closed { fill:none; stroke:var(--eye); stroke-width:2.4; stroke-linecap:round; opacity:0; }
+.lumi.happy .eye-open,.lumi.happy .eye-glint { opacity:0; } .lumi.happy .eye-happy { opacity:1; }
+.lumi.sleepy .eye-open,.lumi.sleepy .eye-glint { opacity:0; } .lumi.sleepy .eye-closed { opacity:1; }
+.eye-g { transform-box:fill-box; transform-origin:center; }
+.lumi.wide .eye-g { transform:scale(1.2); }
+.lumi.focus .eye-g,.lumi.puzzled .eye-g { transform:scaleY(.6); } .lumi.focus .eye-glint { opacity:0; }
+.lumi.sad .eye-g { transform:scaleY(.7); } .lumi.sad #lumi-eyes { transform:translate(0,3px); }
+.lumi.shy #lumi-eyes { transform:translate(3px,2px); } .lumi.shy .eye-g { transform:scaleY(.8); }
+.lumi.thinking #lumi-eyes { transform:translate(-2px,-3px); } .lumi.thinking .eye-g { transform:scaleY(.85); }
+.lumi.down #lumi-eyes { transform:translate(0,2px); }
+.lumi.puzzled svg { transform:rotate(-7deg); transform-origin:50% 60%; }
+.mouth { fill:var(--eye); opacity:0; } .lumi.talk .mouth { opacity:1; } .lumi.oh .mouth { opacity:1; transform-box:fill-box; transform-origin:center; transform:scale(.6,.9); }
+.cheeks ellipse { fill:#FF8FA3; opacity:.3; } .lumi.happy .cheeks ellipse,.lumi.shy .cheeks ellipse { opacity:.6; }
+[data-skin="robot"] .cheeks ellipse,[data-skin="pixel"] .cheeks ellipse,[data-skin="hologram"] .cheeks ellipse,[data-skin="star"] .cheeks ellipse { opacity:0 !important; }
+.glasses,.mark { opacity:0; } .lumi.glasses-on .glasses { opacity:1; } .lumi.notice .mark { opacity:1; }
+.mark path { fill:none; stroke:#F5B83D; stroke-width:2.6; stroke-linecap:round; } .mark circle { fill:#F5B83D; }
+.glasses .lens { fill:rgba(207,226,255,.28); stroke:var(--eye); stroke-width:1.7; }
+.glasses .bridge,.glasses .temple { fill:none; stroke:var(--eye); stroke-width:1.7; stroke-linecap:round; }
+.glasses .shine { fill:none; stroke:#fff; stroke-width:1.1; stroke-linecap:round; opacity:.7; }
+.zz { position:absolute; font:900 44px "Segoe UI",Arial,sans-serif; color:var(--ink); }
+
+/* 1 green */
+.p1 { background:var(--green); }
+.pill { position:absolute; background:var(--ink); color:#fff; border-radius:999px; display:flex; align-items:center; font:700 26px "Segoe UI",Arial,sans-serif; }
+/* 2 red grid */
+.p2 { background:var(--red); color:var(--cream); padding:56px 40px 0; }
+.p2 h1 { font-size:90px; }
+.tile { position:absolute; width:170px; height:170px; border-radius:30px; border:5px solid var(--ink); box-shadow:6px 6px 0 var(--ink); }
+.tile span { position:absolute; left:0; right:0; bottom:9px; text-align:center; font:800 21px "Segoe UI",Arial,sans-serif; color:var(--ink); }
+/* 3 skins quadrants */
+.p3 { background:var(--yellow); }
+.quad { position:absolute; width:250px; height:310px; }
+.quad b { position:absolute; left:0; right:0; bottom:18px; text-align:center; font:900 30px var(--font); text-transform:uppercase; }
+/* 4 posters */
+.p4 { background:var(--purple); color:#fff; }
+.poster { position:absolute; width:178px; height:640px; border-radius:28px; border:5px solid var(--ink); box-shadow:8px 8px 0 var(--ink); overflow:hidden; color:var(--ink); }
+.p4 h1 { font-size:82px; }
+.p1 h1 { font-size:88px; }
+.poster b { position:absolute; left:14px; top:18px; font:900 36px/.92 var(--font); text-transform:uppercase; letter-spacing:-.03em; }
+.poster small { position:absolute; left:14px; right:12px; bottom:20px; font:700 21px/1.2 "Segoe UI",Arial,sans-serif; }
+/* 5 blue */
+.p5 { background:var(--blue); color:#fff; }
+.p5 .sub { color:#fff; }
+/* 6 orange */
+.p6 { background:var(--orange); }
+.key { position:absolute; height:130px; border-radius:26px; background:var(--cream); border:5px solid var(--ink); box-shadow:0 12px 0 var(--ink); display:flex; align-items:center; justify-content:center; font:900 40px var(--font); }
+</style>
+</head>
+<body>
+
+<section class="panel p1" id="p1">
+  <h1>Your new<br>desktop<br>roommate</h1>
+  <p class="sub">Lumi is a tiny AI pet that lives in your Dynamic Island.</p>
+  <div class="pill" style="left:50%;transform:translateX(-50%);top:640px;width:330px;height:84px;padding:0 30px;justify-content:space-between;box-shadow:8px 8px 0 #0A5A06"><span style="color:#A3A3AD">Lumi</span><span style="width:16px;height:16px;border-radius:50%;background:#34C77B"></span></div>
+  <div data-lumi='{"skin":"cat","face":"wide oh","size":5.2,"x":322,"y":1010}'></div>
+</section>
+
+<section class="panel p2" id="p2">
+  <h1>14 moods</h1>
+  <p class="sub" style="font-size:27px;margin-top:14px;color:var(--cream)">One little face. Lots to say.</p>
+  <div id="grid2"></div>
+</section>
+
+<section class="panel p3" id="p3">
+  <h1>Pick<br>your Lumi</h1>
+  <p class="sub">Same face. 18 skins. Change by hand or follow the seasons.</p>
+  <div id="quads"></div>
+</section>
+
+<section class="panel p4" id="p4">
+  <h1>One island.<br>Three jobs.</h1>
+  <div id="posters"></div>
+</section>
+
+<section class="panel p5" id="p5">
+  <h1>Gets out<br>of your<br>way</h1>
+  <p class="sub">Lumi hides itself while a full-screen app is in front.</p>
+  <div class="pill" style="left:50%;transform:translateX(-50%);top:650px;width:300px;height:76px;box-shadow:8px 8px 0 #0A4FA8"></div>
+  <div data-lumi='{"skin":"cloud","face":"sleepy","size":4.6,"x":322,"y":950}'></div>
+  <span class="zz" style="left:440px;top:790px">Z</span><span class="zz" style="left:495px;top:735px;font-size:34px">z</span>
+  <div style="position:absolute;left:0;right:0;bottom:84px;display:flex;flex-direction:column;gap:16px;align-items:center">
+    <span class="sticker" style="background:var(--yellow);color:var(--ink)">Sounds off until you say yes</span>
+    <span class="sticker" style="background:var(--cream);color:var(--ink)">Hide for 1 hour, any time</span>
+  </div>
+</section>
+
+<section class="panel p6" id="p6">
+  <h1>One<br>shortcut</h1>
+  <p class="sub">Open apps, start focus, add a note, or ask Lumi.</p>
+  <div class="key" style="left:60px;top:560px;width:150px">Win</div>
+  <div class="key" style="left:232px;top:560px;width:150px">Alt</div>
+  <div class="key" style="left:404px;top:560px;width:181px;font-size:34px">Space</div>
+  <div class="card" style="position:absolute;left:52px;right:52px;top:790px;height:96px;display:flex;align-items:center;padding:0 24px;background:var(--ink);color:#fff;font:700 30px 'Segoe UI',Arial,sans-serif;box-shadow:9px 9px 0 #7A2C00;border-color:var(--ink)"><span style="color:#A3A3AD">&gt;&nbsp;</span>focus 45</div>
+  <div data-lumi='{"skin":"classic","face":"happy","size":3.6,"x":322,"y":1120}'></div>
+  <span class="sticker" style="position:absolute;left:50%;transform:translateX(-50%);bottom:80px">note buy milk</span>
+</section>
+
+<script>
+const COLORS = { classic:'#FFD9C4', cat:'#F4B183', bunny:'#F1ECF6', bear:'#CDA782', robot:'#BFD0DE', pixel:'#9FE3A2', hologram:'#7FE9E2',
+  cloud:'#E6F0FF', slime:'#A5E57C', sprout:'#EADBB8', santa:'#FBEFE6', reindeer:'#A9805E', snowman:'#F7FBFF', gingerbread:'#C9874F',
+  elf:'#FFE0C7', star:'#FFD45C', jumper:'#FFE7D1', pumpkin:'#F6A23F', party:'#FFD7E8' };
+const MOODS = { listening:'#4C8DFF', speaking:'#34C77B', focus:'#F5B83D', music:'#B98CFF', sad:'#D9CBBE' };
+
+function lumiMarkup(skin){
+  const g = (skin==='classic') ? '' : (LUMI_SKIN_ART[skin]||'');
+  return `<div class="lumi-shape"><svg viewBox="0 0 60 50"><g>${g}</g>
+  <g id="lumi-eyes"><g class="eye-g"><rect class="eye-open" x="17" y="15" width="8" height="12" rx="4"/><circle class="eye-glint" cx="22.4" cy="17.8" r="1.6"/><circle class="eye-glint" cx="19.3" cy="23.6" r=".75"/><path class="eye-happy" d="M16.5 23 Q21 16.5 25.5 23"/><path class="eye-closed" d="M16.5 21.5 Q21 25 25.5 21.5"/></g>
+  <g class="eye-g"><rect class="eye-open" x="35" y="15" width="8" height="12" rx="4"/><circle class="eye-glint" cx="40.4" cy="17.8" r="1.6"/><circle class="eye-glint" cx="37.3" cy="23.6" r=".75"/><path class="eye-happy" d="M34.5 23 Q39 16.5 43.5 23"/><path class="eye-closed" d="M34.5 21.5 Q39 25 43.5 21.5"/></g></g>
+  <ellipse class="mouth" cx="30" cy="34" rx="3.2" ry="2.4"/>
+  <g class="cheeks"><ellipse cx="13" cy="30" rx="3.2" ry="1.9"/><ellipse cx="47" cy="30" rx="3.2" ry="1.9"/></g>
+  <g class="glasses"><path class="temple" d="M13.6 19.5 6.5 16.5M46.4 19.5 53.5 16.5"/><path class="bridge" d="M28.4 20.6q1.6-1.6 3.2 0"/><circle class="lens" cx="21" cy="21" r="7.4"/><circle class="lens" cx="39" cy="21" r="7.4"/><path class="shine" d="M16.6 18.2q1.4-2.4 4-2.8M34.6 18.2q1.4-2.4 4-2.8"/></g>
+  <g class="mark"><path d="M54 -4v6.5"/><circle cx="54" cy="7" r="1.1"/></g>
+  </svg></div>`;
+}
+function mount(el, o){
+  const d = document.createElement('div');
+  d.className = 'lumi ' + (o.face||'') + (o.glasses?' glasses-on':'');
+  d.dataset.skin = o.skin;
+  d.style.setProperty('--body', MOODS[o.mood] || COLORS[o.skin]);
+  d.style.left = (o.x/o.size - 30) + 'px'; d.style.top = (o.y/o.size - 25) + 'px'; d.style.zoom = o.size;
+  d.innerHTML = lumiMarkup(o.skin);
+  el.replaceWith(d); return d;
+}
+function place(panel, o){ const ph=document.createElement('div'); panel.appendChild(ph); return mount(ph,o); }
+document.querySelectorAll('[data-lumi]').forEach(el => mount(el, JSON.parse(el.dataset.lumi)));
+
+/* 2: the 14 expressions from the model sheet, then a "+18 skins" tile */
+const p2=document.getElementById('p2');
+const ex=[['Idle','open',null,'#FFE3D3'],['Happy','happy',null,'#FFD81A'],['Shy','shy',null,'#FF9BC8'],['Surprised','wide oh',null,'#8FD3FF'],['Sad','sad','sad','#CFE0EE'],
+['Sleepy','sleepy',null,'#C9F0DA'],['Puzzled','puzzled',null,'#E2D6FF'],['Thinking','thinking',null,'#FFF0B8'],['Coding','open glasses-on',null,'#FFD81A'],['Notice','notice',null,'#FF9BC8'],
+['Listening','wide','listening','#CFE2FF'],['Speaking','talk','speaking','#C9F0DA'],['Focus','focus','focus','#FFF0B8'],['Music','happy','music','#E2D6FF']];
+ex.forEach(([n,f,m,bg],i)=>{
+  const x=40+(i%3)*182, y=300+Math.floor(i/3)*188;
+  const t=document.createElement('div'); t.className='tile'; t.style.cssText=`left:${x}px;top:${y}px;background:${bg}`; t.innerHTML=`<span>${n}</span>`; p2.appendChild(t);
+  place(p2,{skin:'classic',face:f,mood:m,size:1.9,x:x+85,y:y+78,glasses:/glasses/.test(f)});
+});
+const last=document.createElement('div'); last.className='tile'; last.style.cssText='left:'+(40+2*182)+'px;top:'+(300+4*188)+'px;background:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font:900 36px/1 var(--font)'; last.innerHTML='+18<br>SKINS'; p2.appendChild(last);
+
+/* 3: four skins in colour blocks */
+const q=document.getElementById('quads'), p3=document.getElementById('p3');
+[['cat','Cat','#1E8BFF'],['bunny','Bunny','#FF9BC8'],['bear','Bear','#52C24A'],['robot','Robot','#FF6A00']].forEach(([s,n,bg],i)=>{
+  const x=52+(i%2)*262, y=560+Math.floor(i/2)*336;
+  const c=document.createElement('div'); c.className='quad card'; c.style.cssText=`left:${x}px;top:${y}px;background:${bg}`; c.innerHTML=`<b>${n}</b>`; p3.appendChild(c);
+  place(p3,{skin:s,face:i%2?'happy':'open',size:2.6,x:x+125,y:y+150});
+});
+
+/* 4: three tall posters */
+const p4=document.getElementById('p4');
+[['Ask','Type or talk. Lumi can do things, too.','#FFD81A','listening','wide',380],['Focus','15, 25, 45 or 60 minutes, and a break.','#52C24A','focus','focus',-30],['Agents','Run Claude Code or Codex and watch each step.','#FF9BC8','classic','open glasses-on',380]].forEach(([t,s,bg,m,f,_],i)=>{
+  const x=44+i*188, y=360+(i===1?60:0);
+  const c=document.createElement('div'); c.className='poster'; c.style.cssText=`left:${x}px;top:${y}px;background:${bg}`; c.innerHTML=`<b>${t}</b><small>${s}</small>`; p4.appendChild(c);
+  place(p4,{skin:'classic',face:f,mood:m==='classic'?null:m,size:2.5,x:x+89,y:y+300,glasses:/glasses/.test(f)});
+});
+const foot=document.createElement('span'); foot.className='sticker'; foot.style.cssText='position:absolute;left:50%;transform:translateX(-50%);bottom:70px;background:var(--yellow);color:var(--ink)'; foot.textContent='Same little friend. New tricks.'; p4.appendChild(foot);
+
+const qs=new URLSearchParams(location.search).get('p');
+if(qs){ document.body.classList.add('single'); document.getElementById('p'+qs).classList.add('show'); }
+</script>
+</body>
+</html>

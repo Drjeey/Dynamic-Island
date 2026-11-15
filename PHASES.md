@@ -759,6 +759,89 @@ You asked for a check for bugs, glitches and poor connectivity. The whole test s
 
 **Not tested yet:** the app with the internet really cut (the offline paths were tested by simulating a dead connection); the recap arriving by itself in the real app (there's no focus history from last week on this PC); a real power cut during a save.
 
+## Showcase panels (marketing images)
+
+**What was added:** six App-Store-style portrait panels for Lumi, in `design/showcase/`. `panels.html` loads the app's own `ui/lumi-skins.js` and `ui/lumi-skins.css`, so every skin is the real art, never redrawn, and Lumi is identical in every panel. Skin colours come from `SKINS` in `lumi/config.py`; the face, glasses and mood colours are the ones in `ui/island.html` and `ui/island.css`.
+
+| File | Panel |
+|---|---|
+| `lumi-panel-1.png` | Meet Lumi (hero) |
+| `lumi-panel-2.png` | Just ask (listening blue, example commands from the README) |
+| `lumi-panel-3.png` | Stay in the zone (focus amber, 15/25/45/60) |
+| `lumi-panel-4.png` | Give agents a job (steps as in the Agents panel, reading glasses) |
+| `lumi-panel-5.png` | Dress Lumi up (nine skins) |
+| `lumi-panel-6.png` | Festive Lumi (the seven Christmas skins) |
+| `lumi-all-panels.png` | All six together |
+
+Also `design/lumi-showcase-prompts.md`, a prompt kit for making similar panels with an image generator.
+
+**How it was tested:** rendered with headless Edge at 1290 x 2796 and looked at. A first pass showed the Christmas row overlapping and Lumi too small in two panels; both were fixed and re-rendered. To re-render: `msedge --headless=new --force-device-scale-factor=2 --window-size=645,1398 --screenshot=out.png "file:///.../panels.html?p=N"`.
+
+**Not checked:** the fonts fall back to Segoe UI (Inter is not loaded), so the type will look slightly different on another machine. Texts are placeholders to edit. The "Done. 45 minutes, starting now." reply is illustrative, not a recorded Lumi answer. Nothing was checked on a real phone or in the App Store.
+
+## Voice: faster answers, a natural voice, and a clearer mic (11 Nov 2026)
+
+You said the voice feature and its placement were a bit off, slow to respond, and robotic. Each part was measured or looked at first.
+
+**What was found**
+
+| Problem | Cause |
+|---|---|
+| Slow to respond | Most of the wait was the AI "thinking" before answering a spoken question: first words after 2.6 to 7.5 s |
+| Robotic | Lumi spoke with the old Windows voices (David and Zira) |
+| Placement | The mic button sat on top of the lower half of Lumi's face |
+| Felt stuck | After you stopped talking, the pill went on saying "Listening" while Lumi worked out the answer, and nothing showed what it had heard |
+
+**What changed**
+
+| Area | Change |
+|---|---|
+| Speed | Spoken questions to Gemini skip the thinking step (`quick` in `lumi/providers/gemini.py`); typed chat is unchanged. If a model refuses that setting, Lumi answers the usual way. Lumi also stops listening after 0.7 s of silence instead of 1 s |
+| Voice | New `lumi/speech.py`: Microsoft's online neural voices through `edge-tts` (your choice; default **Ava**, also Ana, Sonia and Andrew). A reply is split into pieces fetched at once and played in order by the page, so the first sentence starts before the rest is ready. Lumi's mouth follows the real loudness of the sound |
+| Fallback | If the first piece isn't ready in 4.5 s (offline, or the service is down), the Windows voice says the reply instead. A one-word warm-up request is made while you're still talking, because the first request after a while is slower |
+| Privacy | Natural voices send the text of Lumi's reply to Microsoft. Settings says so, and so does the first-use voice notice. The service is unofficial and could stop working; the Windows voice is always there |
+| Mic | Moved to Lumi's lower right, clear of the face, still touching the body so the pointer never crosses a gap. It's hidden while Lumi listens, thinks or speaks (the pill has Stop) |
+| Feedback | The pill changes to "Thinking…" the moment you stop talking. What Lumi heard appears under it in quotes until the reply |
+| Settings | Lumi and voice → Voice → **Lumi's voice**: the four natural voices or "Windows voice (works offline)", and **Hear it** |
+| Command bar | `talk` starts listening |
+
+**Measured**
+
+| Step | Before | After |
+|---|---|---|
+| AI's first words on a spoken question | 2.6 to 7.5 s | about 1.1 to 1.3 s |
+| End-of-speech wait | 1.0 s | 0.7 s |
+| Voice starts after the reply is ready | at once (Windows voice) | usually 1.5 to 2.4 s (natural voice); 4.0 s on a cold first request |
+
+So a spoken answer now starts about 2 to 5 s sooner than before, even though the natural voice itself costs about 2 s. Choosing the Windows voice in Settings is faster still, but robotic.
+
+**How it was tested:**
+- **Python (16 checks):** how replies are split; real requests to the voice service (8 in a row: 1.5 to 2.4 s); pieces reach the page in order; the fallback when the service fails; the Windows voice when chosen; Stop; quick answers with real Gemini, including a tool call (`start_focus` with 25 minutes).
+- **The real app (a scratch copy, speakers silenced, no microphone):** the mic clear of the eyes and still touching Lumi; Listening, then Thinking, then what was heard, then the reply; "Hear it" played Ava on the island with the mouth following the sound (46 level updates) and told Python when it finished; choosing Windows and Sonia saves; an unknown voice is refused; Stop silences it at once; `talk` in the command bar; no script errors.
+- **One check failed:** "first sound within 3 s" took 4.0 s, because it was the first request after starting, with no warm-up. In a real spoken question the warm-up happens while you talk.
+- **One check failed once and couldn't be re-run:** "quick mode stayed on" after a tool question. By then my testing had used the day's Gemini allowance (see below), so the cause is unknown. The fallback it exercised is the safe one: Lumi answers the usual way.
+
+**Your Gemini allowance:** your key is on the free tier, which allows 20 requests a day per model. This testing used the day's 20 for `gemini-3.5-flash`. Lumi kept working through the backup model (`gemini-3.5-flash-lite`), which is what the backup setting is for. In normal use you'd reach 20 a day quickly too.
+
+**Not tested yet:** a real spoken question from your microphone, end to end; how Ava sounds on your speakers inside the app (the samples were files); the voice service over a slow connection.
+
+## Showcase panels, set 2 (bold pop style)
+
+**What was added:** six more panels in `design/showcase/`, in a bold flat-pop style taken from the user's new references (solid colour blocks, heavy type, hard ink shadows, an expression grid, sticker posters). Source `panels-pop.html`; it loads the app's real `ui/lumi-skins.js` and `.css`, so Lumi is unchanged and has no outline (the pop styling is on cards and backgrounds only). Files: `lumi-pop-1.png` to `lumi-pop-6.png` and `lumi-pop-all.png`.
+
+| File | Panel |
+|---|---|
+| `lumi-pop-1.png` | Your new desktop roommate (cat skin, green) |
+| `lumi-pop-2.png` | 14 moods, the expressions from the model sheet (red) |
+| `lumi-pop-3.png` | Pick your Lumi (cat, bunny, bear, robot) |
+| `lumi-pop-4.png` | One island, three jobs: Ask, Focus, Agents (purple) |
+| `lumi-pop-5.png` | Gets out of your way (hides in full-screen, sounds off until you say yes) |
+| `lumi-pop-6.png` | One shortcut: Win+Alt+Space and the command bar (orange) |
+
+**How it was tested:** rendered with headless Edge at 1290 x 2796 and looked at. Fixed after the first look: the Panel 4 headline overlapped the posters and "AGENTS" was clipped; the Panel 1 headline was tight to the edge; a sticker touched Lumi in Panel 6.
+
+**Not checked:** the expressions are drawn with CSS approximations of the model sheet (sad, shy, puzzled, thinking), not the app's own mood code, so they may differ slightly. Fonts fall back to Segoe UI Black. The "Gets out of your way" Lumi is the cloud skin, shown asleep for effect. Copy is placeholder.
+
 ## Security fixes from the audit (11 Nov 2026)
 
 The full audit (report in `C:\Users\hp\security-audit-skill\Dynamic-Island-main\run-1\REPORT.md`) found 9 leads, none confirmed because nothing could be run during the audit. These changes fix the 8 that are in code. The ninth, a Gemini API key in git history (commit `abcc346`), needs the key revoked in Google AI Studio; no code change fixes it.
@@ -788,3 +871,183 @@ The full audit (report in `C:\Users\hp\security-audit-skill\Dynamic-Island-main\
 **Not tested:** dropping a file or link onto the island (the navigation cancel and `AllowExternalDrop` are in place but weren't exercised); a full agent run in either mode with a working account; a spoken question end to end; live voice with the new tool checks.
 
 **Still to do by you:** an old copy of `save_server.py` from an earlier session is still running on port 8765 (the version with the bugs); close it. Revoke the Gemini key from commit `abcc346`.
+
+## Fix: Codex sessions not followed, and agent-panel glitches (13 Nov 2026)
+
+**Why Codex sessions never showed:** a Codex conversation keeps writing to the log in the folder of the day it *started* (`~/.codex/sessions/2026/11/05/...`). Lumi only looked in today's and yesterday's folders, so any conversation older than a day was invisible. The only recent logs it did find were Codex's "Guardian review" helper runs, which it skips on purpose.
+
+**What changed (`lumi/agents.py`):**
+- Lumi asks the Codex app's own list of conversations (`~/.codex/state_5.sqlite`, opened read-only) which logs were updated in the last hour, and skips helper reviews. If that list can't be read, it checks every Codex log, listed once a minute. Today's and yesterday's folders are still checked for brand-new conversations.
+- Helper reviews are recognised from their first line even when Lumi starts reading near the end of a big log (before, a review over 400 KB could appear as a phantom session).
+- Sessions take their title and folder from the Codex app's list, so they no longer start as "A session in a folder". A title that is a whole pasted prompt uses its first real line.
+- A new question in a finished conversation starts a fresh chain ("Starting") at once, instead of showing the old "Done" and the old title on a running session.
+- Tool steps are readable: browser and computer-use calls show their own title ("Checking connection dialog") or "Using the computer" instead of "Js"; "google_drive.get_spreadsheet" reads "Google drive: get spreadsheet".
+- Robustness: logs are read at most 4 MB per check; one odd line (wrong shape, too deeply nested) is skipped without losing the rest; a log that shrinks is read again from the start; a huge unfinished line is skipped instead of being re-read every 1.5 seconds; Lumi's own agent runs keep reading their output after an odd event, so the agent can't stall.
+
+**How it was tested:**
+- The Codex app's list, at 12 Nov 12:30 (your last Codex use): it picks the 5 Nov conversation you were in (`FP AFRICA WORK`) and recognises the three Guardian logs as helpers.
+- A replay of the last 6 MB of that real 63 MB log, fed to the watcher 15 lines at a time as if Codex were writing it: 371 lines, 24 island states, ending "Done". It showed the four glitches above; after the fixes the title and folder are right from the start, the gap between questions shows "Starting", and the step names read properly.
+- Bad data: arrays, strings, wrong-shaped items and a 5,000-deep nested line are skipped while the good lines around them still show; a log that shrinks is re-read; a huge unfinished line is skipped and reading carries on; a helper log with a 500 KB first line is recognised.
+- The real app ran for 30 seconds with following turned on: no errors.
+
+**Not tested:** a Codex conversation running live while Lumi is open (none was running); Claude Code following, which uses the same reader but wasn't replayed this time.
+
+## Fix: the Claude Code / Codex switch in the Agents panel (13 Nov 2026)
+
+**What was wrong:** the switch only chose which agent your *next* task would go to. The session shown above it was always the newest one, whatever agent it belonged to, so flipping the switch changed nothing you could see. It also opened on the agent you last used, so it could sit on Claude while Codex was the one working.
+
+**What changed (`ui/island.js`, `ui/island.css`):**
+- The switch decides what the panel shows: that agent's sessions (running ones first, with tabs if it has more than one), or "Codex has no sessions right now. Give it a task below."
+- The panel opens on the agent that's working. Asking by name ("codex …" in the command bar) still wins.
+- While the panel is open, it follows an agent that starts working, until you pick one yourself; after that, your choice stays.
+- Each agent with a running session gets a small pulsing blue dot on its side of the switch, so you can see who's at work whichever one is picked.
+- Tabs name the folder (or the task) instead of repeating the agent's name.
+
+**How it was tested:** the real `island.html` in a browser with made-up sessions: opened while Codex works (switch on Codex, its session shown, dot on Codex); clicking Claude Code shows Claude's session and clicking Codex shows Codex's; updates arriving don't override your choice; picking an agent with no sessions hides the session box and shows the note; a Codex session starting while the panel is open switches to it when you haven't chosen; the compact island reads "Codex · Using the computer".
+
+**Not tested:** in the real app window with real sessions running.
+
+## Agents panel: see the whole answer, know which chat it is, and reply in it (13 Nov 2026)
+
+**What was missing:** a task run from the island showed each answer cut to one line, never said which Codex or Claude Code chat it became or where that was saved, and your next message always started a brand-new chat.
+
+**What changed:**
+- **Read the whole answer:** answers and the final "Done" keep their full text (up to 6,000 characters). Click one to open it on the island; click again to close it. An open answer stays open, and keeps its scroll position, while updates arrive.
+- **Which chat it is:** under the steps, "Codex chat 01a1d243…" (hover for the full id) with two links: **Show where it's saved** opens File Explorer at the chat's file (`~/.codex/sessions/...` or `~/.claude/projects/...`), and **Copy resume command** copies e.g. `cd "<folder>"; codex resume <id>` to carry the chat on in a terminal. Sessions you run yourself show the same strip.
+- **Reply in the same chat:** after a run from the island finishes, the box says "Reply to this chat…" and your message continues it (`codex exec resume <id>` / `claude -p --resume <id>`), in the same folder, with the earlier steps still above. **New chat** (next to the agent switch) starts a fresh one instead.
+- Lumi now keeps each run's chat id (Codex's `thread.started`, Claude Code's `session_id`); a reply waits up to 10 seconds for the previous run in that chat to exit, because the chat stays locked until it does.
+- The page asks for a chat's file or resume command by the island's session id; Python finds the path itself.
+
+Files: `lumi/agents.py`, `lumi/api.py` (`run_agent` takes `continue_id`; new `show_agent_chat`, `copy_agent_resume`), `ui/island.html`, `ui/island.js`, `ui/island.css`.
+
+**How it was tested:**
+- Real Codex through Lumi's own agent code, read-only, in a throwaway folder with two text files: "How many .txt files…" answered "There are 2 .txt files", chat id captured; the reply "And what fruit is in the first one…" continued the same chat and answered "The first file mentions apples." The saved file was found in `~/.codex/sessions/2026/11/13/` and the resume command built.
+- The first try at the reply came back empty: it started while the first Codex process still held the chat. The 10-second wait fixed it.
+- The panel in a browser with a stand-in for Python: the chat strip and "Reply to this chat…" show; clicking an answer opens all 641 characters and it stays open through an update; a reply sends the session id, "New chat" sends none; both links ask by session id. Screenshot checked.
+
+**Not tested:** the two links in the real app (the File Explorer window and the clipboard); replying in a Claude Code chat (same mechanism, not run); the real app window.
+
+## Guides: a pop-up tour of every feature, found again any time (13 Nov 2026)
+
+**What was added:** ten short guides that play on the island itself. Each one opens the panel it's about, puts a pulsing blue ring around the control it's explaining, and talks you through it on Lumi's card with Back / Next / Done ("Coding agents · 2 of 6").
+
+| Guide | Steps | What it covers |
+|---|---|---|
+| Getting started | 4 | The island, the mic, your shortcut, where guides live (this replaces the old first-run tour) |
+| Asking Lumi | 4 | Typing, what Lumi can do, talking, Esc |
+| The command bar | 4 | Apps, shortcuts (focus 45, note …, talk, next), agents, questions, "guide" |
+| Your PC at a glance | 3 | Memory, battery, network, quick buttons |
+| Focus sessions | 4 | Lengths, starting, breaks, your totals and weekly summary |
+| Your quick note | 2 | Saving as you type, adding from anywhere |
+| Music | 2 | Controls, scrolling for volume, asking Lumi |
+| Coding agents | 6 | The switch, edit/read only, folder, steps and answers, replying, following your own sessions |
+| Lumi's looks and sounds | 2 | Skins, colours, seasonal looks, sounds (opens Settings) |
+| The menu | 3 | Settings, Hide 1 hour, Guides |
+
+**Finding them again:**
+- **Guides** in the island's right-click menu opens the command bar listing every guide.
+- In the command bar, type `guide` (or `tour`, `tutorial`, `help` on its own) for the list, or `guide focus`, `tour agents` to jump to one. "help me write…" still goes to Lumi as a question.
+- Settings has a **Guides** page with every guide, a "Show me" button each, and a tick on the ones you've finished.
+- The first time you open a feature (chat, command bar, dashboard, focus, note, music, agents), Lumi offers its guide once: "First time here? Want a quick tour of Focus sessions? It's 4 short steps." Not now is remembered.
+
+**How it works:** the steps are in `ui/lumi-guides.js` (shared by the island and Settings); `ui/island.js` plays them, keeps panels open while a guide shows, and ends a guide if you open something else yourself or press Esc. `lumi/api.py` lists the guides for the command bar and Settings (`GUIDES`), and remembers finished and offered ones in `config.json` (`guides_seen`, `guides_offered`).
+
+**How it was tested:**
+- Every one of the 34 steps points at a control that exists in `ui/island.html`, and the guide ids match between the page and Python.
+- Command bar: `guide` lists all 10; `guide agents`, `tour focus`, `tutorial music`, `guides codex` find the right one; `help me write an email` still asks Lumi.
+- In a browser with a stand-in for Python opening panels as the app does: all ten guides played start to finish (right panel, right control ringed, mic and island highlights for Getting started and Asking Lumi, Settings opened for Lumi's looks); Back goes back a step; Esc closes and leaves nothing highlighted; Done shows "Find this again under Guides" and records the guide as finished; Getting started still completes the first-run tour; opening the note for the first time offered its guide once, and not again after "Not now".
+- Settings' Guides page lists all ten with ticks, and "Show me" asks the island for that guide. Screenshots checked.
+- The real app started and ran for 25 seconds with no errors.
+
+**Bug found and fixed while testing:** the guide list was declared with `const`, which the island and Settings couldn't see as `window.LUMI_GUIDES`, so no guide played. It's now `window.LUMI_GUIDES`.
+
+**Not tested:** guides in the real app window (only in a browser); the Settings "Show me" button reaching the island in the real app.
+
+## Design fixes from the critique: safe agent runs, panels that stay open, keyboard answers, a warmer Lumi (13 Nov 2026)
+
+The Impeccable critique of `ui/island.html` scored 24/40 (`.impeccable/critique/2026-11-13T09-36-47Z__ui-island-html.md`). You chose: safe agent runs first, a warmer Lumi, the top 3 issues.
+
+**1. Safe agent runs (was P0: edit rights by default, no confirmation)**
+- New installs start agents in **Read only** (`agent_mode` default `read`); after that, Lumi remembers your last choice.
+- The permission chip says it plainly: **Read only** (eye) or **Edits files** (amber, pencil).
+- The **first edit run in a folder asks once**: an amber bar "Codex will edit files in lumi-island. Run it?" with Cancel / Run, and the send arrow turns amber; Enter again runs. Changing the task, folder, agent or permission clears the question. Folders you've said yes to are kept in `agent_edit_folders`.
+- Python decides, not the page: `AgentManager.run` refuses an edit run in a new folder unless `confirmed=True` (only a real `True` counts), and `claude …` / `codex …` in the command bar opens the panel with the task filled in instead of starting.
+- While a run you started is working, the box reads "Waiting for Codex…" and it and the send arrow are disabled.
+
+**2. Panels that stay open (was P1: panels close while reading)**
+- An opened answer, or text you've selected in Agents, Notes or Chat, holds the panel for 15 s after the pointer leaves, instead of 0.6 s. Clicking another window closes it (but not when Lumi itself opened Explorer, the folder picker or the clipboard).
+- A **pin** in the Agents and Notes headers keeps the panel open until you unpin it, press Esc or close it.
+
+**3. Answers from the keyboard (was P1: mouse-only)**
+- Each answer's label is a real button (`aria-expanded`, "Read it all" / "Hide the full text"); focus stays on it after opening. The long task title has a tooltip and expands when you tab to it. Reading, editing and commands keep their own icons.
+
+**4. A warmer Lumi (you chose "warmer")**
+- Lumi appears in the Chat and Agents headers (30 px, with eyes), and reads along (eyes moving) while an agent works; still with reduced motion.
+- Short lines for runs started from the island: "On it." when it starts; "Codex is done. Have a look?" or "That didn't work out. The Agents panel says why." when it ends and the panel is closed.
+- The empty Agents panel speaks as Lumi: "Tell me a task for Claude Code or Codex. I keep an eye on the sessions you run yourself, too."
+- The agent switch's working dot no longer pulses (one moving thing at a time; Lumi reading along carries it).
+
+**Files:** `lumi/config.py`, `lumi/agents.py`, `lumi/api.py`, `ui/island.html`, `ui/island.css`, `ui/island.js`, `ui/lumi-guides.js` (the agents guide's permission step).
+
+**How it was tested:**
+- Python, with a stand-in so no agent started: read mode runs; edit mode in a new folder returns "confirm first"; `confirmed=True` runs; a folder already OK'd runs (case doesn't matter); `confirmed="yes"` does not count; the command bar opens the panel instead; new installs default to read only.
+- The panel in a browser with a stand-in for Python: Read only by default; the chip turns amber; the first Enter shows the question, editing the task removes it, Run sends `confirmed=true`, the bar clears, and the next run in the same folder doesn't ask; while running, "Waiting for Codex…" with the box and arrow disabled, Lumi reading, and "On it."; the answer button opens with the keyboard and keeps focus; an opened answer holds the panel, the pin holds it through a collapse, and Esc closes it and clears the pin. Screenshots checked: the question bar (including a very long folder name, cut with "…"), the opened answer with the pin, the running state, and the chat header.
+- Bugs found and fixed while testing: the question stayed up after a successful run until the next update; the island didn't grow enough for the bar when it wrapped (the bar is now always one line, 38 px).
+- The design detector finds the same 8 items as before the changes (no new ones); the pulsing-dot item is addressed by the steady dot.
+
+**Not tested:** in the real app window (your Lumi was running, and two copies can't share WebView2); a real agent run through the new confirmation; the 15-second hold and click-outside with a real mouse; screen-reader output.
+
+## Agents panel, round 2: clearer sessions, permission per task, keyboard (13 Nov 2026)
+
+The re-run critique scored 28/40 (up from 24; `.impeccable/critique/2026-11-13T10-12-44Z__ui-island-html.md`). You chose: a clearer Agents panel first, permission chosen when you send, both P1s.
+
+**Clearer sessions**
+- Tabs are named by their task ("Fix the login bug"), not the folder, with a status icon (spinner while working, ✓ done, ✗ problem, ■ stopped). The tooltip and screen-reader label say it in words ("Fix the login bug, Working"), with the folder in the tooltip.
+- "Waiting for Codex…" only shows on the session that's running. On another session the box says which task is busy ("Codex is busy with “fix the login bug”") and a **Show it** link jumps there. (Lumi runs one agent task at a time, so the box stays disabled until it finishes.)
+
+**Permission chosen when you send** (replaces the "Read only / Edits files" toggle)
+- **Enter** or the blue arrow runs **read only**. **Run with edits** (amber, pencil) beside it lets the agent change files. Nothing lingers between tasks.
+- The first edit run in a folder still asks once ("Codex will edit files in lumi-island. Run it?"); while it asks, Enter answers it. Python still decides.
+- `claude …` / `codex …` in the command bar always run read only now.
+
+**Keyboard**
+- The Claude Code / Codex switch and the session tabs are one Tab stop each; arrow keys (and Home/End) move and select. The tabs control the session area (`role="tabpanel"`).
+- **Ctrl+1 / Ctrl+2** pick Claude Code / Codex while the panel is open.
+- The task title is only a Tab stop when it's cut off.
+- With a guide showing, focus moves to the card's Next button, and goes back where it was when the guide ends.
+- Tab stops in the panel with two sessions: 8 (was 13).
+- The task row has a real 4px inset around its buttons.
+
+**Files:** `ui/island.html`, `ui/island.css`, `ui/island.js`, `ui/lumi-guides.js` (the agents guide now points at "Run with edits" and mentions Ctrl+1/2), `lumi/api.py` (command bar runs read only).
+
+**How it was tested (browser, stand-in for Python):** Enter sent `mode "read"`; Run with edits asked the folder question, and Enter answered it (`confirmed=true`); two sessions in one folder showed as "fix the login bug" (spinner, "Working") and "explain the auth module" (✓, "Done"); on the running one "Waiting for Codex…", on the other "Codex is busy with “fix the login bug”" with Show it, which jumped to the running tab and focused it; ArrowRight moved between tabs; ArrowLeft on the switch picked Claude Code and moved focus; Ctrl+2 picked Codex; 8 Tab stops; the guide card took focus and gave it back to the task box. Screenshot checked. The design detector shows the same 7 known false positives (a new "cramped" flag on the task row was fixed with the inset). Python imports and both scripts parse.
+
+**Not tested:** the real app window (your Lumi was running); a real agent run; a screen reader.
+
+## Release packaging: Windows installer (15 Nov 2026)
+
+**Changes**
+- `.gitignore` now skips `video/**/node_modules/`, `video/renders/`, `build/`, `dist/` and the installer output.
+- Added an MIT `LICENSE` (holder "Lumi Island contributors"; change if you prefer a name) and `VERSION = '1.0.0'` in `lumi/config.py`.
+- `lumi/config.py`: when frozen, settings, notes and the focus log live in `%APPDATA%\Lumi Island`; from source they stay beside the code. `window.py`: Start with Windows registers the exe itself when frozen.
+- `installer/LumiIsland.spec` (PyInstaller, one-folder, no console) and `installer/LumiIsland.iss` (Inno Setup, per-user install, optional desktop shortcut and autostart, uninstaller).
+
+**Build**
+```
+pyinstaller installer/LumiIsland.spec --noconfirm --distpath dist --workpath build
+ISCC installer\LumiIsland.iss        (writes installer\Output\LumiIsland-Setup-1.0.0.exe)
+```
+
+**Testing**
+- PyInstaller build succeeds (173 MB folder). Launched `LumiIsland.exe`: the island and Lumi render, and `config.json` is created in `%APPDATA%\Lumi Island`.
+- Not yet done: building the Setup.exe (Inno Setup not installed here), a clean-PC install, and checking voice, music, agents and autostart in the frozen build.
+
+## App icon and README hero (15 Nov 2026)
+
+**Changes**
+- `design/brand/icon.html` draws the app icon (Lumi's neutral face on a dark rounded square); `installer/lumi.ico` holds 16 to 256 px sizes. Wired into the PyInstaller exe (`icon=`) and the installer (`SetupIconFile`).
+- `design/brand/hero.html` renders `design/brand/hero.png` (1600x1000), shown at the top of the README. It follows the showcase panels: cloud background, peach rings, island pill, Lumi, skin cut-outs from the model sheet, and five feature cards.
+- Re-render either with Edge headless: `msedge --headless=new --window-size=1600,1000 --screenshot=hero.png file:///.../hero.html`.
+
+**Testing**
+- Looked at the rendered PNGs. The rebuilt exe has an icon resource and the Setup.exe (75 MB) compiled. I haven't looked at the icon in Explorer or the taskbar yet.

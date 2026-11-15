@@ -6,6 +6,7 @@ openai
 SpeechRecognition==3.17.0
 sounddevice
 pyttsx3
+edge-tts
 pycaw
 pywin32
 keyring

@@ -1,8 +1,14 @@
+<p align="center"><img src="design/brand/hero.png" alt="Meet Lumi: a tiny AI pet that lives in your Dynamic Island" width="100%"></p>
+
 # Dynamic-Island
 
 A Windows desktop "Dynamic Island" overlay with Lumi, a small AI pet you can talk to.
 
-## Setup
+## Install
+
+Download `LumiIsland-Setup-<version>.exe` from the [Releases](https://github.com/Drjeey/Dynamic-Island/releases) page and run it (Windows 10 or later, no admin rights needed). Windows may show a SmartScreen warning because the installer is not code-signed: choose **More info → Run anyway**. Your settings are kept in `%APPDATA%\Lumi Island`.
+
+## Run from source
 
 ```bash
 pip install -r requirements.txt
@@ -30,7 +36,7 @@ setx GEMINI_API_KEY "your-key-here"
 - **Agents:** open **Agents** from the dashboard to give Claude Code or Codex a task in a folder (or type `claude <task>` / `codex <task>` in the command bar). Each step shows as a node: thinking, reading, editing, running a command, then done. Sessions you run yourself show up too, and Lumi puts on its reading glasses while any of them works.
 - **Right-click** the island for Settings, Hide for 1 hour, and Quit.
 - **Scroll** on the island to change the volume; the level shows in the island.
-- **Hover** over Lumi and click the mic to talk. The first click explains where your voice is sent; click again to start. In Settings you can switch to **Live (preview)** voice, a flowing conversation you can interrupt (headphones recommended).
+- **Hover** over Lumi and click the mic at its lower right to talk (or type `talk` in the command bar). Lumi answers in a natural online voice; choose another, or the offline Windows voice, in Settings. The first click explains where your voice is sent; click again to start. In Settings you can switch to **Live (preview)** voice, a flowing conversation you can interrupt (headphones recommended).
 - **Drag** the island to another display; it snaps to the top centre. Choose "Free" in Settings to leave it where you drop it.
 - **Dress Lumi up** in Settings → Lumi and voice → Skin: cat, bunny, bear, robot, pixel, hologram, cloud, slime, sprout, pumpkin, party, or for Christmas a star, Santa hat, reindeer, snowman, gingerbread, elf or jumper. Turn on **Dress up for the season** to have Lumi change by itself for Halloween, Christmas (a different skin each day, plus snowfall, presents and a few other festive moments) and New Year.
 - **Sounds** are off until you say yes (Lumi asks once). Turn them on or set the volume in Settings → Lumi and voice. Lumi stays quiet while it's listening or speaking, and while a full-screen app is in front.

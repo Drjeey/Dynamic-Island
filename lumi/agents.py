@@ -6,13 +6,15 @@ Every session becomes a short chain of *nodes* for the page: what you asked, the
 
 Sessions started here run the agent's own command-line tool headless (claude -p ... --output-format stream-json,
 codex exec --json) and read its events as they arrive. Sessions you run yourself are followed by reading the logs
-both tools already write (~/.claude/projects/*/*.jsonl and ~/.codex/sessions/**/rollout-*.jsonl). Nothing is
+both tools already write (~/.claude/projects/*/*.jsonl and ~/.codex/sessions/**/rollout-*.jsonl; the Codex app's
+list of conversations, ~/.codex/state_5.sqlite, read-only, says which Codex logs are in use). Nothing is
 sent anywhere; labels hold only tool names, file names and the first words of commands.
 """
 import json
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import threading
 import time
@@ -24,6 +26,7 @@ MAX_NODES = 40          # kept per session; the page shows the last few
 WATCH_FRESH = 20        # seconds: a log written this recently is a session that's running
 WATCH_STALE = 600       # seconds: a running session silent this long is dropped
 KEEP_FINISHED = 12      # seconds a finished session stays on the island
+TEXT_MAX = 6000         # characters of an answer kept, so you can read it in full on the island
 CREATE_NO_WINDOW = 0x08000000
 HOST_ONLY_ENV = ('ANTHROPIC_BASE_URL', 'USE_LOCAL_OAUTH', 'USE_STAGING_OAUTH', 'CLAUDE_PREVIEW_CLASSIFIER_FLOOR')
 TURN_ENDS = ('end_turn', 'stop_sequence')  # stop_sequence: a line the tool wrote itself ("No response requested.")
@@ -32,6 +35,9 @@ PASTED = re.compile(r'<pasted_content\b[^>]*>(.*?)</pasted_content\b[^>]*>', re.
 HOME = Path.home()
 CLAUDE_LOGS = HOME / '.claude' / 'projects'
 CODEX_LOGS = HOME / '.codex' / 'sessions'
+CODEX_THREADS = HOME / '.codex' / 'state_5.sqlite'  # the Codex app's list of conversations and where each one logs
+READ_MAX = 4_000_000      # bytes read from one log per check; a big burst is read over the next checks
+LINE_MAX = 16_000_000     # an unfinished line longer than this is skipped rather than waited for
 
 
 # --- finding the tools ---
@@ -81,6 +87,18 @@ def _name(path):
     return Path(str(path)).name or str(path) if path else ''
 
 
+MCP_SERVERS = {'cua_repl': 'Using the computer', 'node_repl': 'Running code', 'browser': 'Using the browser'}
+
+
+def _tool_name(tool, server=''):
+    """'google_drive.get_spreadsheet' -> 'Google drive: get spreadsheet'; a bare 'js' says what the server is for."""
+    tool = str(tool or '').strip()
+    if len(tool) <= 3 and server:
+        return MCP_SERVERS.get(server) or 'Using ' + server.replace('_', ' ')
+    text = tool.replace('_', ' ').replace('.', ': ') or 'Tool'
+    return text[:1].upper() + text[1:]
+
+
 def _command_words(cmd):
     """'"C:\\...\\powershell.exe" -Command \'Get-Content -Raw a.txt\'' -> 'Get-Content -Raw a.txt'"""
     if isinstance(cmd, list):
@@ -120,7 +138,12 @@ def codex_item_node(item):
         changes = item.get('changes') or {}
         names = [_name(c.get('path')) for c in changes] if isinstance(changes, list) else [_name(p) for p in changes]
         return 'edit', 'Editing ' + (names[0] if len(names) == 1 else f'{len(names)} files' if names else 'files'), ', '.join(names[1:4])
-    if t in ('mcptoolcall',): return 'tool', _short(str(item.get('tool') or 'Tool').replace('_', ' ').capitalize(), 40), _short(item.get('server'), 30)
+    if t in ('mcptoolcall',):
+        # The call's own title ("Checking connection dialog") reads better than the tool's name ("Js")
+        args = item.get('arguments') if isinstance(item.get('arguments'), dict) else {}
+        title = args.get('title') if isinstance(args.get('title'), str) else ''
+        server = str(item.get('server') or '')
+        return 'tool', _short(title or _tool_name(item.get('tool'), server), 40), _short(server.replace('_', ' '), 30)
     if t in ('websearch', 'extension'): return 'web', 'Searching the web', _short(item.get('query'), 48)
     if t == 'imageview': return 'read', 'Looking at an image', _name(item.get('path'))
     if t == 'todolist': return 'plan', 'Updating the plan', ''
@@ -167,6 +190,8 @@ class Session:
         self.ended = None
         self.stopping = False       # Stop was pressed
         self.stderr = ''            # the last thing the tool said on stderr
+        self.chat_id = ''           # the agent's own id for this chat (a Codex thread, a Claude Code session)
+        self.log_path = ''          # where the agent saves it, when known
         self._seq = 0
         self._by_key = {}           # tool call id -> node
         self._open = {}             # node id -> calls still running (repeats share a node)
@@ -178,9 +203,17 @@ class Session:
         self.status, self.message, self.ended = 'running', '', None
         self.started = time.time()
         self.title = _short(prompt, 80)
-        self.add('prompt', _short(prompt, 56) or 'New task', state='done')
+        self.add('prompt', _short(prompt, 56) or 'New task', state='done', text=prompt)
 
-    def add(self, kind, label, detail='', state='active', key=None, placeholder=False):
+    def continue_turn(self, prompt):
+        """Your next message in the same chat: the earlier steps stay, and the new question follows them."""
+        self.nodes = [n for n in self.nodes if not n.get('placeholder')]
+        self._by_key, self._open = {}, {}
+        self.status, self.message, self.ended, self.stopping = 'running', '', None, False
+        self.started = time.time()
+        self.add('prompt', _short(prompt, 56) or 'Next', state='done', text=prompt)
+
+    def add(self, kind, label, detail='', state='active', key=None, placeholder=False, text=None):
         self._settle()
         self._seq += 1
         last = self.nodes[-1] if self.nodes else None
@@ -191,6 +224,9 @@ class Session:
         else:
             node = {'id': f'n{self._seq}', 'kind': kind, 'label': label, 'detail': detail, 'state': state}
             if placeholder: node['placeholder'] = True
+            text = ' '.join(str(text or '').split(' ')).strip()
+            if text and len(text) > len(detail or ''):
+                node['text'] = text[:TEXT_MAX] + ('…' if len(text) > TEXT_MAX else '')  # shown in full when you open the step
             self.nodes.append(node)
             del self.nodes[:-MAX_NODES]
         if key:
@@ -225,8 +261,12 @@ class Session:
                 n['state'] = 'done' if status == 'done' else 'failed'
         self.status, self.message, self.ended = status, _short(message, 90), time.time()
         label = {'done': 'Done', 'failed': 'Stopped with a problem', 'stopped': 'Stopped'}[status]
-        self.nodes.append({'id': f'n{self._seq + 1}', 'kind': 'end', 'label': label, 'detail': self.message,
-                           'state': 'done' if status == 'done' else 'failed'})
+        node = {'id': f'n{self._seq + 1}', 'kind': 'end', 'label': label, 'detail': self.message,
+                'state': 'done' if status == 'done' else 'failed'}
+        full = str(message or '').strip()
+        if len(full) > len(self.message):
+            node['text'] = full[:TEXT_MAX] + ('…' if len(full) > TEXT_MAX else '')
+        self.nodes.append(node)
         self._seq += 1
 
     def view(self):
@@ -235,6 +275,8 @@ class Session:
                 'title': self.title, 'folder': _name(self.cwd), 'status': self.status, 'message': self.message,
                 'current': current['label'] if current else (self.nodes[-1]['label'] if self.nodes else 'Starting…'),
                 'nodes': self.nodes[-12:], 'steps': sum(1 for n in self.nodes if n['kind'] not in ('prompt', 'end')),
+                'chat_id': self.chat_id, 'saved': bool(self.chat_id),
+                'can_continue': self.source == 'island' and bool(self.chat_id) and self.status != 'running',
                 'elapsed': int((self.ended or time.time()) - self.started)}
 
     # --- reading Claude Code (stream-json and transcript share the message shapes) ---
@@ -276,7 +318,7 @@ class Session:
                     self.add(kind, label, detail, key=b.get('id'))
                 elif b.get('type') == 'text' and b.get('text', '').strip():
                     if msg.get('stop_reason') not in TURN_ENDS:
-                        self.add('reply', 'Writing a note', _short(b['text'], 56), state='done')
+                        self.add('reply', 'Writing a note', _short(b['text'], 56), state='done', text=b['text'])
             if msg.get('stop_reason') in TURN_ENDS:
                 self.end('done', text)
         elif t == 'result':
@@ -295,7 +337,7 @@ class Session:
                 self.add(*node, key=item.get('id'))
         elif t == 'item.completed':
             if item.get('type') == 'agent_message':
-                self.add('reply', 'Writing an answer', _short(item.get('text'), 56), state='done')
+                self.add('reply', 'Writing an answer', _short(item.get('text'), 56), state='done', text=item.get('text'))
                 self.message = item.get('text') or ''
                 return
             if item.get('id') in self._by_key:
@@ -320,7 +362,12 @@ class Session:
             return
         t = p.get('type')
         if t == 'task_started':
-            self.status, self.ended = 'running', None
+            if self.ended:  # a new question in a finished conversation: don't show the old "Done" as still going
+                self.nodes, self._by_key, self._open = [], {}, {}
+                self.started = time.time()
+                self.title = ''  # the last question's title would be wrong; the new question replaces this soon
+                self.add('think', 'Starting', placeholder=True)
+            self.status, self.ended, self.message = 'running', None, ''
         elif t == 'item_completed':
             item = p.get('item') or {}
             if item.get('type') == 'UserMessage':
@@ -328,7 +375,7 @@ class Session:
                 self.begin_turn(text)
             elif item.get('type') == 'AgentMessage':
                 text = ' '.join(c.get('text', '') for c in item.get('content') or [] if isinstance(c, dict))
-                self.add('reply', 'Writing an answer', _short(text, 56), state='done')
+                self.add('reply', 'Writing an answer', _short(text, 56), state='done', text=text)
             else:
                 node = codex_item_node(item)
                 if node and node[0] != 'error':
@@ -354,6 +401,8 @@ class AgentManager:
         self._starting = None        # the agent between "nothing's running" and its process existing
         self._own_ids = set()        # agent session ids started here, so the log watcher skips them
         self._files = {}             # watched log path -> {'pos', 'session'}
+        self._codex_scan = (0, [])   # (when, every Codex log), for when the Codex app's list can't be read
+        self._codex_meta = {}        # Codex log path -> (title, folder), from the Codex app's list
         self._last_push = 0
         self._push_timer = None
 
@@ -368,7 +417,8 @@ class AgentManager:
                     'running': any(s.status == 'running' and s.nodes for s in sessions),
                     'available': {a: _installed(a) for a in AGENTS},
                     'cwd': self._ctrl.config.get('agent_cwd') or '', 'agent': self._ctrl.config.get('agent_kind', 'claude'),
-                    'mode': self._ctrl.config.get('agent_mode', 'edit'), 'own': bool(self._proc)}
+                    'mode': self._ctrl.config.get('agent_mode', 'read'), 'own': bool(self._proc),
+                    'edit_ok': list(self._ctrl.config.get('agent_edit_folders') or [])}
 
     def _changed(self, now=False):
         """Pushes the sessions to the page, at most 4 times a second."""
@@ -393,13 +443,40 @@ class AgentManager:
         self._ctrl.push('agents', st)
 
     # --- running a session here ---
-    def run(self, agent, prompt, cwd, mode='edit'):
-        """Starts Claude Code or Codex on a task in a folder. Returns None, or an error for the page."""
+    def edit_allowed(self, folder):
+        """True when you've already said an agent may edit files in this folder."""
+        key = os.path.normcase(os.path.abspath(str(folder)))
+        return any(os.path.normcase(os.path.abspath(f)) == key for f in self._ctrl.config.get('agent_edit_folders') or [])
+
+    def run(self, agent, prompt, cwd, mode='read', continue_id=None, confirmed=False):
+        """Starts Claude Code or Codex on a task in a folder, or continues a chat started here (continue_id is the
+        island's id for that session). Returns None, or an error for the page."""
         prompt = str(prompt or '').strip()
         if agent not in AGENTS: return 'Unknown agent.'
         if not prompt: return 'Type what the agent should do.'
+        earlier = None
+        if continue_id:
+            with self._lock:
+                earlier = self._sessions.get(str(continue_id))
+            if not earlier or earlier.source != 'island' or earlier.agent != agent or not earlier.chat_id:
+                return "That chat can't be continued from here. Start a new one."
+            if earlier.status == 'running':
+                return f'{AGENTS[agent]} is still answering in that chat.'
+            cwd = earlier.cwd  # a chat stays in its own folder
+            # The agent reports its answer a moment before its process exits, and the chat stays locked until it
+            # does; a reply sent in that moment would come back empty
+            with self._lock:
+                last = self._proc[1] if self._proc and self._proc[0] is earlier else None
+            if last:
+                try:
+                    last.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    return f'{AGENTS[agent]} is still finishing that chat. Try again in a moment.'
         folder = Path(str(cwd or '').strip()).expanduser()
         if not str(cwd or '').strip() or not folder.is_dir(): return 'Choose a folder for the agent to work in.'
+        if mode == 'edit' and not confirmed and not self.edit_allowed(folder):
+            # The first time an agent would change files in a folder, you say so first (the page shows the question)
+            return 'CONFIRM_EDIT'
         exe = find_cli(agent)
         if not exe: return f"{AGENTS[agent]} isn't installed on this PC."
         with self._lock:
@@ -412,6 +489,8 @@ class AgentManager:
         # by cmd.exe, which would treat & | < > ^ and %NAME% in the task as commands and variables
         if agent == 'claude':
             args = [exe, '-p', '--output-format', 'stream-json', '--verbose']
+            if earlier:
+                args += ['--resume', earlier.chat_id]
             if mode == 'edit':
                 args += ['--permission-mode', 'acceptEdits']
             else:
@@ -421,6 +500,11 @@ class AgentManager:
                 read_tools = 'Read,Grep,Glob,WebSearch,WebFetch'
                 args += ['--tools', read_tools, '--allowedTools', read_tools, '--setting-sources', 'user',
                          '--permission-mode', 'dontAsk']
+        elif earlier:
+            # "exec resume" takes the sandbox as a setting, not -s
+            sandbox = 'workspace-write' if mode == 'edit' else 'read-only'
+            args = [exe, 'exec', 'resume', '--json', '--skip-git-repo-check', '-c', f'sandbox_mode="{sandbox}"',
+                    earlier.chat_id, '-']  # "-": read the task from stdin
         else:
             args = [exe, 'exec', '--json', '--skip-git-repo-check', '-s', 'workspace-write' if mode == 'edit' else 'read-only',
                     '-']  # "-": read the task from stdin
@@ -443,14 +527,21 @@ class AgentManager:
             with self._lock:
                 self._starting = None
             return f"Couldn't start {AGENTS[agent]}: {e}"
-        s = Session(f'own-{int(time.time() * 1000)}', agent, 'island', folder)
-        s.begin_turn(prompt)
+        if earlier:
+            s = earlier
+            with self._lock:
+                s.continue_turn(prompt)
+        else:
+            s = Session(f'own-{int(time.time() * 1000)}', agent, 'island', folder)
+            s.begin_turn(prompt)
         s.add('think', 'Starting up', placeholder=True)
         with self._lock:
             self._sessions[s.id] = s
             self._proc = (s, proc)
             self._starting = None
         self._ctrl.config.update({'agent_cwd': str(folder), 'agent_kind': agent, 'agent_mode': mode})
+        if mode == 'edit' and not self.edit_allowed(folder):
+            self._ctrl.config['agent_edit_folders'] = list(self._ctrl.config.get('agent_edit_folders') or []) + [str(folder)]
         self._ctrl.config.save()
         threading.Thread(target=self._read, args=(s, proc), daemon=True).start()
         threading.Thread(target=self._read_errors, args=(s, proc), daemon=True).start()
@@ -464,15 +555,24 @@ class AgentManager:
                 continue
             try:
                 o = json.loads(line)
-            except ValueError:
+            except (ValueError, RecursionError):
+                continue
+            if not isinstance(o, dict):
                 continue
             with self._lock:
-                if s.agent == 'claude':
-                    if o.get('session_id'): self._own_ids.add(o['session_id'])
-                    s.claude_line(o)
-                else:
-                    if o.get('type') == 'thread.started': self._own_ids.add(o.get('thread_id', ''))
-                    s.codex_event(o)
+                try:
+                    if s.agent == 'claude':
+                        if o.get('session_id'):
+                            self._own_ids.add(o['session_id'])
+                            s.chat_id = s.chat_id or str(o['session_id'])
+                        s.claude_line(o)
+                    else:
+                        if o.get('type') == 'thread.started' and o.get('thread_id'):
+                            self._own_ids.add(o['thread_id'])
+                            s.chat_id = s.chat_id or str(o['thread_id'])
+                        s.codex_event(o)
+                except Exception as e:  # keep reading: an unread pipe would stall the agent
+                    print(f'Agent output line skipped ({s.agent}): {type(e).__name__}: {e}')
             self._changed()
         code = proc.wait()
         with self._lock:
@@ -502,6 +602,51 @@ class AgentManager:
         subprocess.run(['taskkill', '/PID', str(proc.pid), '/T', '/F'], capture_output=True, creationflags=CREATE_NO_WINDOW)
         return True
 
+    # --- where a chat is saved ---
+    def chat_file(self, session_id):
+        """The file the agent saved a session to, or None. Found from the session itself, never from the page."""
+        with self._lock:
+            s = self._sessions.get(str(session_id))
+        if not s or not s.chat_id:
+            return None
+        if s.log_path and Path(s.log_path).is_file():
+            return Path(s.log_path)
+        if s.agent == 'claude':
+            found = list(CLAUDE_LOGS.glob(f'*/{s.chat_id}.jsonl')) if CLAUDE_LOGS.is_dir() else []
+        else:
+            found = self._codex_log_for(s.chat_id)
+        if found:
+            s.log_path = str(found[0])
+            return found[0]
+        return None
+
+    @staticmethod
+    def _codex_log_for(thread_id):
+        if CODEX_THREADS.is_file():
+            try:
+                db = sqlite3.connect(f'file:{CODEX_THREADS.as_posix()}?mode=ro', uri=True, timeout=0.5)
+                try:
+                    row = db.execute('SELECT rollout_path FROM threads WHERE id = ?', (thread_id,)).fetchone()
+                finally:
+                    db.close()
+                if row and row[0]:
+                    path = str(row[0])
+                    path = Path(path[4:] if path.startswith('\\\\?\\') else path)
+                    if path.is_file():
+                        return [path]
+            except sqlite3.Error:
+                pass
+        return list(CODEX_LOGS.glob(f'*/*/*/rollout-*{thread_id}.jsonl')) if CODEX_LOGS.is_dir() else []
+
+    def resume_command(self, session_id):
+        """What to type in a terminal to pick the chat up there, or None."""
+        with self._lock:
+            s = self._sessions.get(str(session_id))
+        if not s or not s.chat_id:
+            return None
+        command = f'codex resume {s.chat_id}' if s.agent == 'codex' else f'claude --resume {s.chat_id}'
+        return f'cd "{s.cwd}"; {command}' if s.cwd else command  # Claude Code finds a chat from the folder it was in
+
     # --- following sessions run elsewhere ---
     def forget_watched(self):
         """Following was turned off: the sessions it found leave the island."""
@@ -521,10 +666,7 @@ class AgentManager:
             for d in CLAUDE_LOGS.iterdir():
                 if d.is_dir():
                     files += [('claude', f) for f in d.glob('*.jsonl')]
-        for day in (date.today(), date.today() - timedelta(days=1)):
-            folder = CODEX_LOGS / f'{day:%Y}' / f'{day:%m}' / f'{day:%d}'
-            if folder.is_dir():
-                files += [('codex', f) for f in folder.glob('rollout-*.jsonl')]
+        files += [('codex', f) for f in self._codex_logs(now)]
         fresh = []
         for agent, f in files:
             try:
@@ -533,6 +675,65 @@ class AgentManager:
             except OSError:
                 pass
         return fresh
+
+    def _codex_logs(self, now):
+        """The Codex logs that may be in use. A conversation keeps writing to the log in the folder of the day it
+        started, so a week-old chat you're still in lives in last week's folder. The Codex app's own list of
+        conversations says which logs those are; without it, every log is checked (listed once a minute)."""
+        paths = self._codex_from_app(now)
+        if paths is None:
+            if now - self._codex_scan[0] > 60:
+                found = list(CODEX_LOGS.glob('*/*/*/rollout-*.jsonl')) if CODEX_LOGS.is_dir() else []
+                self._codex_scan = (now, found)
+            paths = list(self._codex_scan[1])
+        for day in (date.today(), date.today() - timedelta(days=1)):  # new ones, before the app has listed them
+            folder = CODEX_LOGS / f'{day:%Y}' / f'{day:%m}' / f'{day:%d}'
+            if folder.is_dir():
+                paths += folder.glob('rollout-*.jsonl')
+        return list(dict.fromkeys(paths))
+
+    def _codex_from_app(self, now):
+        """Logs of the conversations (not their helper reviews) the Codex app updated in the last hour, or None
+        when its list can't be read (not installed, or a version that keeps it differently). Opened read-only."""
+        if not CODEX_THREADS.is_file():
+            return None
+        try:
+            db = sqlite3.connect(f'file:{CODEX_THREADS.as_posix()}?mode=ro', uri=True, timeout=0.5)
+            try:
+                rows = db.execute('SELECT rollout_path, source, title, cwd FROM threads WHERE archived = 0 AND updated_at > ?',
+                                  (int(now) - 3600,)).fetchall()
+            finally:
+                db.close()
+        except sqlite3.Error:
+            return None
+        paths = []
+        for path, source, title, cwd in rows:
+            if 'subagent' in str(source):
+                continue  # a review Codex runs inside a conversation: not a session of its own
+            path = str(path or '')
+            if path.startswith('\\\\?\\'):
+                path = path[4:]  # Windows long-path prefix
+            paths.append(Path(path))
+            cwd = str(cwd or '')
+            # The title is often the whole first message: keep its first real line, not a ``` fence or a heading mark
+            first = next((ln.strip(' #*>`-') for ln in str(title or '').splitlines()
+                          if ln.strip(' #*>`-') and not ln.strip().startswith('```')), '')
+            self._codex_meta[str(Path(path))] = (first, cwd[4:] if cwd.startswith('\\\\?\\') else cwd)
+        return paths
+
+    @staticmethod
+    def _is_codex_helper(f):
+        """True for a Codex log that belongs to a review run inside another conversation. Its first line says so."""
+        try:
+            with open(f, 'rb') as fh:
+                first = fh.readline(LINE_MAX)
+            meta = json.loads(first.decode('utf-8', errors='replace'))
+        except (OSError, ValueError, RecursionError):
+            return False
+        if not isinstance(meta, dict) or meta.get('type') != 'session_meta' or not isinstance(meta.get('payload'), dict):
+            return False
+        p = meta['payload']
+        return bool(p.get('parent_thread_id')) or 'subagent' in json.dumps(p.get('source'))
 
     def _watch(self):
         while True:
@@ -557,6 +758,9 @@ class AgentManager:
             if entry and entry.get('ignore'):
                 continue
             if entry is None:
+                if agent == 'codex' and self._is_codex_helper(f):
+                    self._files[key] = {'ignore': True, 'session': None}
+                    continue
                 # First sight: read back far enough to find the question being worked on
                 size = f.stat().st_size
                 entry = self._files[key] = {'pos': max(0, size - 400_000), 'session': None, 'skip_partial': size > 400_000}
@@ -578,13 +782,21 @@ class AgentManager:
     def _read_log(self, agent, f, entry):
         try:
             with open(f, 'rb') as fh:
+                size = os.fstat(fh.fileno()).st_size
+                if size < entry['pos']:
+                    entry['pos'] = 0  # the log was cut short or replaced: read it again from the start
                 fh.seek(entry['pos'])
-                data = fh.read()
+                data = fh.read(READ_MAX)
         except OSError:
             return False
         end = data.rfind(b'\n')
         if end < 0:
+            if len(data) >= READ_MAX:  # part of one very long line: wait for it to end, then skip it
+                entry['waiting'] = entry.get('waiting', 0) + len(data)
+                if entry['waiting'] > LINE_MAX:
+                    entry.update(pos=size, waiting=0, skip_partial=True)
             return False
+        entry['waiting'] = 0
         chunk, entry['pos'] = data[:end], entry['pos'] + end + 1
         lines = chunk.split(b'\n')
         if entry.pop('skip_partial', False):
@@ -593,22 +805,31 @@ class AgentManager:
             s = entry['session']
             if s is None:
                 s = entry['session'] = Session(f'log-{f.stem[-12:]}-{int(time.time())}', agent, 'watched')
+                # Claude Code names a log after its session id; a Codex log name ends in its thread id
+                s.chat_id, s.log_path = (f.stem if agent == 'claude' else f.stem[-36:]), str(f)
             before = (s._seq, s.status)
             for raw in lines:
                 try:
                     o = json.loads(raw.decode('utf-8', errors='replace'))
-                except ValueError:
+                except (ValueError, RecursionError):
                     continue
-                if agent == 'claude':
-                    s.claude_line(o)
-                else:
-                    if o.get('type') == 'session_meta' and (o.get('payload') or {}).get('parent_thread_id'):
-                        # A reviewer run inside a Codex session: not a session of its own
-                        entry.update(ignore=True, session=None)
-                        return False
-                    s.codex_rollout(o)
+                if not isinstance(o, dict):
+                    continue
+                if agent == 'codex' and o.get('type') == 'session_meta' and isinstance(o.get('payload'), dict) \
+                        and o['payload'].get('parent_thread_id'):
+                    # A reviewer run inside a Codex session: not a session of its own
+                    entry.update(ignore=True, session=None)
+                    return False
+                try:
+                    s.claude_line(o) if agent == 'claude' else s.codex_rollout(o)
+                except Exception as e:  # one odd line mustn't lose the rest
+                    print(f'Agent log line skipped ({agent}): {type(e).__name__}: {e}')
             if not s.nodes:
                 return False  # nothing worth showing yet (only bookkeeping lines)
+            title, cwd = self._codex_meta.get(str(f), ('', '')) if agent == 'codex' else ('', '')
+            s.cwd = s.cwd or cwd
+            if not s.title and title:
+                s.title = _short(title, 80)
             if not s.title:
                 s.title = 'A session in ' + (_name(s.cwd) or 'a folder')
             if s.id not in self._sessions and not (s.ended and time.time() - s.ended > KEEP_FINISHED):

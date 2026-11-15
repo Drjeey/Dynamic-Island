@@ -45,6 +45,9 @@ function load() {
         $('row-lumi-idle').classList.toggle('disabled', !values.lumi_visible);
         $('hotkey').value = values.hotkey;
         $('voice_mode').value = values.voice_mode;
+        $('voice_choice').innerHTML = Object.entries(res.voices).map(([id, name]) => `<option value="${id}">${name} (natural)</option>`).join('')
+            + '<option value="windows">Windows voice (works offline)</option>';
+        $('voice_choice').value = values.voice_engine === 'windows' ? 'windows' : values.voice_name;
         $('live_model').value = values.live_model;
         $('custom_url').value = values.custom_url;
         $('ai_provider').innerHTML = Object.entries(providers).map(([name, p]) => `<option value="${name}">${p.label}</option>`).join('');
@@ -185,10 +188,41 @@ $('form-key').addEventListener('submit', e => {
     if (value) saveKey(value);
 });
 $('remove-key').addEventListener('click', () => saveKey(''));
+// One list for both settings: a natural voice by name, or the built-in Windows voice
+$('voice_choice').addEventListener('change', async () => {
+    const choice = $('voice_choice').value, natural = choice !== 'windows';
+    if (natural) await save('voice_name', choice);
+    const res = await save('voice_engine', natural ? 'natural' : 'windows', $('msg-voice'));
+    if (res.ok) Object.assign(values, { voice_engine: natural ? 'natural' : 'windows' }, natural ? { voice_name: choice } : {});
+});
+$('test-voice').addEventListener('click', () => api().test_voice());
 $('voice_mode').addEventListener('change', () => { save('voice_mode', $('voice_mode').value, $('msg-voice')).then(syncVoiceRow); syncVoiceRow(); });
 $('form-live-model').addEventListener('submit', e => { e.preventDefault(); save('live_model', $('live_model').value.trim(), $('msg-voice')); });
-$('replay').addEventListener('click', () => api().replay_tour());
+// Guides: one row each, built from lumi-guides.js; a tick for the ones you've finished
+async function renderGuides() {
+    const box = $('guides-list');
+    const seen = new Set(((await api().guides()) || []).filter(g => g.seen).map(g => g.id));
+    box.querySelectorAll('.row').forEach(r => r.remove());
+    for (const g of window.LUMI_GUIDES || []) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const label = document.createElement('div');
+        label.className = 'label';
+        const b = document.createElement('b'), span = document.createElement('span');
+        b.textContent = g.title + (seen.has(g.id) ? '  ✓' : '');
+        span.textContent = g.blurb;
+        label.append(b, span);
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'btn'; btn.textContent = 'Show me';
+        btn.setAttribute('aria-label', 'Show the guide: ' + g.title);
+        btn.addEventListener('click', () => api().start_guide(g.id));
+        row.append(label, btn);
+        box.append(row);
+    }
+}
 document.querySelectorAll('[data-preview]').forEach(b => b.addEventListener('click', () => api().preview(b.dataset.preview)));
 
-if (api() && api().get) load();
-else window.addEventListener('pywebviewready', load);
+if (api() && api().get) { load(); renderGuides(); }
+else window.addEventListener('pywebviewready', () => { load(); renderGuides(); });
+// Back from a guide: the ticks may have changed
+window.addEventListener('focus', () => { if (api() && api().guides) renderGuides(); });

@@ -17,10 +17,11 @@ from .api import IslandAPI, SettingsAPI
 from .activity import ActivityBus
 from .agents import AgentManager
 from .providers import PROVIDERS
+from .speech import VOICES
 from .apps import AppIndex
 from .credentials import migrate_from_config
 from .focus import FocusManager
-from .config import (AUTO_START_NAME, ENTRY_SCRIPT, HIT_COLOR, MIN_HEIGHT, STORAGE_PATH, TRANSPARENT_KEY,
+from .config import (AUTO_START_NAME, ENTRY_SCRIPT, FROZEN, HIT_COLOR, MIN_HEIGHT, STORAGE_PATH, TRANSPARENT_KEY,
                      LUMI_COLORS, SKINS, WINDOW_TITLE, WINDOW_WIDTH, Config, is_christmas, seasonal_skin)
 from .hotkey import GlobalHotkey
 from .media import MediaWatcher
@@ -175,6 +176,8 @@ class IslandController:
         if key == 'monitor' and value < 0: return 'Unknown display.'
         if key == 'lumi_idle' and value not in ('peek', 'always'): return 'Unknown choice.'
         if key == 'voice_mode' and value not in ('standard', 'live'): return 'Unknown voice mode.'
+        if key == 'voice_engine' and value not in ('natural', 'windows'): return 'Unknown voice.'
+        if key == 'voice_name' and value not in VOICES: return 'Unknown voice.'
         if key == 'ai_provider' and value not in PROVIDERS: return 'Unknown provider.'
         if key in AI_KEYS and key.endswith('_model') and key != 'gemini_backup_model' and not value.strip():
             return 'Enter a model name.'
@@ -226,9 +229,13 @@ class IslandController:
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, run_key, 0, winreg.KEY_SET_VALUE) as key:
                 if self.config.get('auto_start'):
-                    pythonw = Path(sys.executable).with_name('pythonw.exe')
-                    exe = pythonw if pythonw.exists() else Path(sys.executable)
-                    winreg.SetValueEx(key, AUTO_START_NAME, 0, winreg.REG_SZ, f'"{exe}" "{ENTRY_SCRIPT}"')
+                    if FROZEN:
+                        command = f'"{sys.executable}"'
+                    else:
+                        pythonw = Path(sys.executable).with_name('pythonw.exe')
+                        exe = pythonw if pythonw.exists() else Path(sys.executable)
+                        command = f'"{exe}" "{ENTRY_SCRIPT}"'
+                    winreg.SetValueEx(key, AUTO_START_NAME, 0, winreg.REG_SZ, command)
                 else:
                     try: winreg.DeleteValue(key, AUTO_START_NAME)
                     except FileNotFoundError: pass

@@ -38,6 +38,7 @@
         <symbol id="i-spin" viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 1-8 8"/></symbol>
         <symbol id="i-agent" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M7 10l3 2.5L7 15M12.5 15H17"/></symbol>
         <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9.5 3.5h5l-.8 5.5 3.8 3.8H6.5l3.8-3.8-.8-5.5zM12 12.8V20.5"/></symbol>
         <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.8"/></symbol>
         <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3a5.5 5.5 0 0 1-11 0zM12 16.5V21"/></symbol>
         <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/></symbol>
@@ -126,7 +127,7 @@
             </div>
         </div>
         <div class="content" id="notes-ui">
-            <div class="notes-header pywebview-drag-region"><svg class="icon" aria-hidden="true"><use href="#i-note"/></svg><span>Quick note</span><span class="save-indicator" id="save-msg">Saved</span></div>
+            <div class="notes-header pywebview-drag-region"><svg class="icon" aria-hidden="true"><use href="#i-note"/></svg><span>Quick note</span><span class="save-indicator" id="save-msg" role="status">Saved</span><button class="chat-close panel-pin" type="button" id="notes-pin" data-pin="notes" aria-pressed="false" aria-label="Keep this panel open" title="Keep open"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></button></div>
             <textarea id="notes-area" placeholder="Type something…" aria-label="Quick note"></textarea>
         </div>
         <div class="content" id="music-ui">
@@ -155,7 +156,7 @@
             </div>
         </div>
         <div class="content" id="chat-ui">
-            <div class="chat-head pywebview-drag-region"><span class="cmd-lumi" aria-hidden="true"></span><b>Lumi</b><button class="chat-close" type="button" id="chat-close" aria-label="Close chat" title="Close (Esc)"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+            <div class="chat-head pywebview-drag-region"><span class="head-lumi" aria-hidden="true"></span><b>Lumi</b><button class="chat-close" type="button" id="chat-close" aria-label="Close chat" title="Close (Esc)"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
             <div class="chat-log" id="chat-log" role="log" aria-live="polite"></div>
             <form class="chat-form" id="chat-form">
                 <input id="chat-input" type="text" placeholder="Ask Lumi, or ask Lumi to do something…" aria-label="Message to Lumi" autocomplete="off" spellcheck="true">
@@ -163,30 +164,39 @@
             </form>
         </div>
         <div class="content" id="agents-ui">
-            <div class="chat-head pywebview-drag-region"><svg class="icon ag-head-icon" aria-hidden="true"><use href="#i-agent"/></svg><b>Agents</b>
+            <div class="chat-head pywebview-drag-region"><span class="head-lumi" id="ag-lumi" aria-hidden="true"></span><b>Agents</b>
                 <div class="ag-tabs" id="ag-tabs" role="tablist" aria-label="Sessions"></div>
+                <button class="chat-close panel-pin" type="button" id="ag-pin" data-pin="agents" aria-pressed="false" aria-label="Keep this panel open" title="Keep open"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></button>
                 <button class="chat-close" type="button" id="ag-close" aria-label="Close" title="Close (Esc)"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
-            <div class="ag-session" id="ag-session">
+            <div class="ag-session" id="ag-session" role="tabpanel" aria-labelledby="ag-title">
                 <div class="ag-meta"><span class="ag-title ellipsis" id="ag-title"></span><span class="ag-sub" id="ag-sub"></span><button type="button" class="ag-stop" id="ag-stop">Stop</button></div>
                 <ol class="ag-nodes" id="ag-nodes" aria-live="polite"></ol>
+                <div class="ag-chat" id="ag-chat"><span class="ag-chat-id ellipsis" id="ag-chat-id"></span><button type="button" class="ag-link" id="ag-show-file">Show where it's saved</button><button type="button" class="ag-link" id="ag-copy-resume">Copy resume command</button></div>
             </div>
-            <div class="chat-empty" id="ag-empty">Give Claude Code or Codex a task below. Sessions you run yourself show up here too.</div>
+            <div class="chat-empty" id="ag-empty">Tell me a task for Claude Code or Codex. I keep an eye on the sessions you run yourself, too.</div>
             <form class="ag-form" id="ag-form">
                 <div class="ag-options">
                     <div class="ag-seg" role="radiogroup" aria-label="Agent" id="ag-pick">
                         <button type="button" role="radio" data-agent="claude">Claude Code</button><button type="button" role="radio" data-agent="codex">Codex</button>
                     </div>
-                    <button type="button" class="ag-chip" id="ag-mode" aria-label="What the agent may do"></button>
+                    <button type="button" class="ag-chip" id="ag-new" title="Start a new chat instead of replying to this one">New chat</button>
                     <button type="button" class="ag-chip ag-folder" id="ag-folder" title="Choose the folder the agent works in"><svg class="icon"><use href="#i-folder"/></svg><span class="ellipsis" id="ag-folder-name">Choose folder</span></button>
+                </div>
+                <div class="ag-confirm" id="ag-confirm" role="alert" hidden>
+                    <svg class="icon" aria-hidden="true"><use href="#i-note"/></svg><span class="ag-confirm-text" id="ag-confirm-text"></span>
+                    <button type="button" class="btn-text" id="ag-confirm-no">Cancel</button><button type="button" class="ag-confirm-yes" id="ag-confirm-yes">Run</button>
                 </div>
                 <div class="chat-form">
                     <input id="ag-input" type="text" placeholder="What should it do?" aria-label="Task for the agent" autocomplete="off" spellcheck="true">
-                    <button type="submit" class="chat-send" id="ag-run" aria-label="Run"><svg class="icon"><use href="#i-send"/></svg></button>
+                    <button type="button" class="ag-link ag-busy-go" id="ag-busy-go" hidden>Show it</button>
+                    <button type="button" class="ag-edits" id="ag-edits" title="Run, and let it change files in its folder"><svg class="icon" aria-hidden="true"><use href="#i-note"/></svg>Run with edits</button>
+                    <button type="submit" class="chat-send" id="ag-run" aria-label="Run, read only" title="Run, read only (Enter)"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg></button>
                 </div>
             </form>
         </div>
         <div class="content" id="menu-ui">
             <button class="menu-item" type="button" id="menu-settings"><svg class="icon"><use href="#i-settings"/></svg>Settings</button>
+            <button class="menu-item" type="button" id="menu-guides"><svg class="icon"><use href="#i-list"/></svg>Guides</button>
             <button class="menu-item" type="button" id="menu-hide"><svg class="icon"><use href="#i-eyeoff"/></svg>Hide 1 hour</button>
             <button class="menu-item" type="button" id="menu-quit"><svg class="icon"><use href="#i-power"/></svg>Quit</button>
         </div>
@@ -201,6 +211,7 @@
     <script src="lumi-state.js"></script>
     <script src="lumi-skins.js"></script>
     <script src="lumi-sounds.js"></script>
+    <script src="lumi-guides.js"></script>
     <script src="island.js"></script>
 </body>
 </html>

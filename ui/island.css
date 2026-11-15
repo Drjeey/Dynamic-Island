@@ -265,12 +265,13 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 #agents-ui { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 10px; box-sizing: border-box; gap: 8px; cursor: default; }
 .ag-head-icon { width: 16px !important; height: 16px !important; color: var(--blue); }
 .ag-tabs { display: flex; gap: 4px; min-width: 0; }
-.ag-tab { height: 22px; max-width: 120px; padding: 0 9px; border-radius: 11px; font-size: 11px; color: var(--text-2); background: transparent; display: flex; align-items: center; gap: 5px; }
+.ag-tab { height: 22px; max-width: 150px; padding: 0 9px; border-radius: 11px; font-size: 11px; color: var(--text-2); background: transparent; display: flex; align-items: center; gap: 5px; }
 .ag-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ag-tab::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--text-2); flex: none; }
-.ag-tab.running::before { background: var(--blue); animation: node-pulse 1.2s ease-in-out infinite; }
-.ag-tab.failed::before { background: var(--red); }
-.ag-tab.done::before { background: var(--green); }
+.ag-tab::before { content: none; }
+.ag-tab svg.icon { width: 12px; height: 12px; flex: none; color: var(--text-2); stroke-width: 2.2; }
+.ag-tab.running svg.icon { color: var(--blue); }
+.ag-tab.done svg.icon { color: var(--green); }
+.ag-tab.failed svg.icon { color: var(--red); }
 .ag-tab:hover { background: var(--tile); color: var(--text); }
 .ag-tab[aria-selected="true"] { background: var(--tile); color: var(--text); }
 .ag-session { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
@@ -299,6 +300,18 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .ag-node.done .ag-label { color: var(--text-2); }
 .ag-node.kind-prompt .ag-label, .ag-node.kind-end .ag-label { color: var(--text); }
 .ag-count { flex: none; font-size: 10.5px; color: var(--text-2); background: var(--tile); border-radius: 8px; padding: 1px 6px; }
+/* An answer you can open: the step grows to show it in full */
+.ag-node.has-text { cursor: pointer; }
+.ag-node.has-text:hover .ag-label { color: var(--text); }
+.ag-node.open { height: auto; min-height: 30px; flex-wrap: wrap; align-content: flex-start; padding-top: 4px; padding-bottom: 6px; }
+.ag-node.open .ag-detail { display: none; }
+.ag-full { flex-basis: 100%; margin: 2px 0 0 34px; padding: 8px 10px; border-radius: 10px; background: var(--tile); color: var(--text);
+    font-size: 12px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 170px; overflow-y: auto; cursor: text; user-select: text; }
+.ag-chat { display: flex; align-items: center; gap: 10px; height: 22px; padding: 0 8px; font-size: 11px; color: var(--text-2); }
+.ag-chat-id { flex: 1; min-width: 0; }
+.ag-link { flex: none; font-size: 11px; color: var(--blue); padding: 0; background: none; }
+.ag-link:hover { text-decoration: underline; }
+.ag-chip.on { background: var(--tile); color: var(--text); box-shadow: inset 0 0 0 1px var(--blue); }
 .ag-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); font-family: var(--font-mono); font-size: 11px; }
 .ag-node.kind-end .ag-detail, .ag-node.kind-reply .ag-detail { font-family: var(--font); font-size: 12px; }
 .ag-form { display: flex; flex-direction: column; gap: 6px; }
@@ -307,8 +320,45 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .ag-seg button { height: 22px; padding: 0 10px; border-radius: 11px; font-size: 11.5px; color: var(--text-2); }
 .ag-seg button[aria-checked="true"] { background: #2C2C34; box-shadow: var(--lift); color: var(--text); font-weight: 600; }
 .ag-seg button:disabled { opacity: 0.4; cursor: default; }
+/* An agent with a session running: a small pulsing dot, so you can see who's at work whichever one is picked */
+.ag-seg button { position: relative; }
+.ag-seg button.working::after { content: ''; position: absolute; top: 3px; right: 4px; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--blue); }  /* steady: Lumi reading along already says it's working */
 .ag-chip { height: 26px; padding: 0 10px; border-radius: 13px; background: var(--surface); box-shadow: var(--lift); font-size: 11.5px; color: var(--text-2); display: flex; align-items: center; gap: 6px; flex: none; }
 .ag-chip:hover { background: var(--surface-hover); color: var(--text); }
+/* The permission chip says plainly when the agent may change files: amber, with a pencil */
+.ag-chip.edit { color: var(--amber); background: rgba(245, 184, 61, 0.09); box-shadow: inset 0 0 0 1px rgba(245, 184, 61, 0.55); }
+.ag-chip.edit:hover { background: rgba(245, 184, 61, 0.16); color: var(--amber); }
+/* Asked once per folder before an agent edits it */
+.ag-confirm { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 6px 4px 10px; border-radius: 12px;
+    background: rgba(245, 184, 61, 0.10); box-shadow: inset 0 0 0 1px rgba(245, 184, 61, 0.40); font-size: 12px; color: var(--text); }
+.ag-confirm[hidden] { display: none; }
+.ag-confirm svg.icon { width: 14px; height: 14px; color: var(--amber); flex: none; }
+.ag-confirm-text { flex: 1; min-width: 0; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-confirm-text b { font-weight: 600; color: var(--amber); display: inline-block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.ag-confirm { height: 38px; box-sizing: border-box; }
+.ag-confirm-yes { font-size: 12px; font-weight: 600; color: #1A1408; background: var(--amber); padding: 5px 12px; border-radius: 8px; flex: none; }
+.ag-confirm-yes:hover { filter: brightness(1.08); }
+.chat-send.confirm { background: var(--amber); color: #1A1408; }
+#ag-input:disabled, #ag-run:disabled { opacity: 0.45; cursor: default; }
+.ag-edits { flex: none; height: 28px; padding: 0 10px; border-radius: 14px; display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600;
+    color: var(--amber); background: rgba(245, 184, 61, 0.09); box-shadow: inset 0 0 0 1px rgba(245, 184, 61, 0.5); white-space: nowrap; }
+.ag-edits svg.icon { width: 13px; height: 13px; }
+.ag-edits:hover { background: rgba(245, 184, 61, 0.17); }
+.ag-edits:disabled { opacity: 0.4; cursor: default; }
+.ag-edits[hidden], .ag-busy-go[hidden] { display: none; }
+.ag-busy-go { flex: none; font-size: 12px; }
+/* The task row holds two buttons: a real 4px inset around them, inside the same 36px pill */
+#ag-form .chat-form { box-sizing: border-box; padding-top: 4px; padding-bottom: 4px; }
+/* Pin: keep a panel open while you work beside it */
+.panel-pin[aria-pressed="true"] { color: var(--blue); background: var(--tile); }
+.panel-pin[aria-pressed="true"] svg.icon { fill: currentColor; }
+.notes-header .panel-pin { margin-left: 4px; width: 22px; height: 22px; }
+/* An answer you can open from the keyboard too */
+.ag-open { background: none; padding: 0; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; border-radius: 4px; }
+.ag-node .ag-open:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, 0.3); }
+/* The whole task, when you point at or tab to a long title */
+.ag-title:focus-visible { white-space: normal; overflow: visible; }
 .ag-chip svg.icon { width: 13px; height: 13px; }
 .ag-folder { flex: 1 1 auto; min-width: 0; }
 .ag-folder.missing { color: var(--amber); }
@@ -326,6 +376,14 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 /* --- COMMAND BAR --- */
 #command-ui { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 8px; box-sizing: border-box; gap: 6px; cursor: default; }
 .cmd-row { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 8px; }
+/* Lumi in a panel header: larger than the command bar's, and reading along while an agent works */
+.head-lumi { width: 30px; height: 25px; flex: none; position: relative; background: var(--lumi); border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%;
+    box-shadow: inset 2px 2.5px 4px rgba(255, 255, 255, 0.45), inset -2px -3px 5px rgba(0, 0, 0, 0.14); }
+.head-lumi::before, .head-lumi::after { content: ''; position: absolute; top: 8px; width: 4px; height: 7px; border-radius: 2px; background: var(--eye); }
+.head-lumi::before { left: 8px; } .head-lumi::after { right: 8px; }
+@keyframes head-read { 0%, 100% { transform: translate(-1.5px, 1px); } 50% { transform: translate(1.5px, 1px); } }
+.head-lumi.reading::before, .head-lumi.reading::after { animation: head-read 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .head-lumi.reading::before, .head-lumi.reading::after { animation: none; transform: translateY(1px); } }
 .cmd-lumi { width: 22px; height: 18px; flex: none; box-shadow: inset 1.5px 2px 3px rgba(255, 255, 255, 0.45), inset -1.5px -2.5px 4px rgba(0, 0, 0, 0.14); background: var(--lumi); border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%; position: relative; }
 .cmd-lumi::before, .cmd-lumi::after { content: ''; position: absolute; top: 6px; width: 3px; height: 5px; border-radius: 2px; background: var(--eye); }
 .cmd-lumi::before { left: 6px; } .cmd-lumi::after { right: 6px; }
@@ -393,17 +451,20 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 #lumi-sparkles i { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: var(--amber); opacity: 0; }
 #lumi-sparkles i:nth-child(even) { background: var(--violet); width: 4px; height: 4px; margin: -2px; }
 
-/* MIC BUTTON: overlaps Lumi's body so the mouse can reach it without crossing a click-through gap */
+/* MIC BUTTON: at Lumi's lower right, clear of its face. It overlaps the body's edge so the mouse can reach it without
+   crossing a click-through gap */
 #mic-btn {
-    position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
-    width: 30px; height: 30px; border-radius: 50%;
+    position: absolute; bottom: -9px; right: -15px; transform: scale(0.7); transform-origin: 30% 30%;
+    width: 28px; height: 28px; border-radius: 50%;
     background: #2A2A30; color: var(--text);
     display: flex; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 0.2s, bottom 0.2s, background 0.2s;
+    opacity: 0; transition: opacity 0.2s, transform 0.25s var(--spring), background 0.2s;
     border: 1px solid rgba(255,255,255,0.18);
 }
-#mic-btn svg.icon { width: 16px; height: 16px; }
-#lumi-container:hover #mic-btn, #mic-btn:focus-visible, .show-mic #mic-btn { opacity: 1; bottom: -20px; }
+#mic-btn svg.icon { width: 15px; height: 15px; }
+#lumi-container:hover #mic-btn, #mic-btn:focus-visible, .show-mic #mic-btn { opacity: 1; transform: scale(1); }
+/* While Lumi listens, thinks or speaks, the mic stays out of the way (the pill has Stop) */
+.mood-listening #mic-btn, .mood-speaking #mic-btn, .mood-thinking #mic-btn { opacity: 0 !important; pointer-events: none; }
 #mic-btn:hover { background: var(--blue); }
 
 /* SPEECH BUBBLE */
@@ -419,6 +480,8 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 }
 #speech-bubble.visible { transform: translateX(-50%) scale(1); opacity: 1; }
 #speech-bubble.error::before { content: '⚠ '; color: var(--red); }
+/* What Lumi heard you say, while it works out the answer */
+#speech-bubble.heard { color: var(--text-2); font-style: italic; }
 
 /* CARD (tour steps and questions like "Take a break?") */
 #card {
@@ -435,6 +498,9 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .btn-text { font-size: 12px; color: var(--text-2); padding: 6px 10px; border-radius: 8px; }
 .btn-text:hover { background: #222228; color: var(--text); }
 .btn-primary { font-size: 12px; font-weight: 600; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22); background: var(--blue-strong); padding: 6px 14px; border-radius: 8px; }
+/* A guide points at one control: a soft blue ring that pulses */
+@keyframes guide-ring { 0% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0.55); } 70% { box-shadow: 0 0 0 7px rgba(76, 141, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0); } }
+.guide-spot { outline: 2px solid var(--blue) !important; outline-offset: 2px; border-radius: 12px; animation: guide-ring 1.6s ease-out infinite; }
 .highlight-island #island { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(76, 141, 255, 0.35), inset 0 1px 1px rgba(255,255,255,0.12); }
 
 /* --- LUMI MOODS (one per state; see resolveMood) --- */

@@ -13,6 +13,7 @@
         <div class="brand"><span class="mini-island" aria-hidden="true"></span><span>Lumi Island</span></div>
         <button class="nav selected" type="button" data-page="general">General</button>
         <button class="nav" type="button" data-page="lumi">Lumi and voice</button>
+        <button class="nav" type="button" data-page="guides">Guides</button>
         <button class="nav" type="button" data-page="about">About</button>
     </nav>
 
@@ -83,9 +84,8 @@
                     <label class="switch"><input type="checkbox" id="celebrations"><span></span></label></div>
                 <div class="row"><div class="label"><b>Weekly focus recap</b><span>Once a week Lumi offers a short summary of last week's focus time</span></div>
                     <label class="switch"><input type="checkbox" id="weekly_summary"><span></span></label></div>
-                <div class="row"><div class="label"><b>Getting started tour</b><span>Show the tips from the first launch again</span></div>
-                    <button type="button" class="btn" id="replay">Show tour</button></div>
             </div>
+
 
             <h2>Try a reaction</h2>
             <div class="card tryout">
@@ -113,6 +113,9 @@
 
             <h2>Voice</h2>
             <div class="card">
+                <div class="row"><div class="label"><b>Lumi's voice</b><span id="voice-help">Natural voices send Lumi's replies to Microsoft to be spoken. Offline, Lumi uses the Windows voice.</span></div>
+                    <select id="voice_choice" aria-label="Lumi's voice"></select>
+                    <button type="button" class="btn" id="test-voice">Hear it</button></div>
                 <div class="row"><div class="label"><b>Voice mode</b><span>Standard listens, then replies. Live (preview) is a flowing conversation you can interrupt; it needs Gemini.</span></div>
                     <select id="voice_mode" aria-label="Voice mode">
                         <option value="standard">Standard</option>
@@ -121,6 +124,13 @@
                 <div class="row" id="row-live-model"><div class="label"><b>Live model</b><span>A Gemini Live model with native audio. Model names change; check Google AI Studio.</span></div>
                     <form class="inline" id="form-live-model"><input type="text" id="live_model" aria-label="Gemini Live model" spellcheck="false"><button type="submit" class="btn">Save</button></form></div>
                 <p class="message" id="msg-voice" role="status"></p>
+            </div>
+        </section>
+
+        <section id="page-guides" class="page" hidden>
+            <h1>Guides</h1>
+            <div class="card" id="guides-list" aria-label="Guides">
+                <p class="tryout-note">A short walk through each part of Lumi Island, on the island itself. Also under Guides in the island's right-click menu, or type "guide" in the command bar.</p>
             </div>
         </section>
 
@@ -135,6 +145,7 @@
     </main>
 
     <script src="lumi-skins.js"></script>
+    <script src="lumi-guides.js"></script>
     <script src="settings.js"></script>
 </body>
 </html>

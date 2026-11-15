@@ -1,4 +1,6 @@
+import base64
 import ctypes
+import itertools
 import queue
 import threading
 import time
@@ -6,7 +8,7 @@ import time
 import pyttsx3
 import speech_recognition as sr
 
-from . import providers
+from . import providers, speech
 from .activity import Cancelled
 from .credentials import get_api_key
 from .levels import QUIET, LevelMeter
@@ -43,6 +45,8 @@ class ChatController:
         self.voice_level = LevelMeter(ctrl.push, 'voice')  # the talking mouth
         self.speech_queue = queue.Queue()
         self._hush = threading.Event()  # set to stop speaking mid-sentence (the run was cancelled)
+        self._speech_ids = itertools.count(1)
+        self._speech = None     # (id, event) while the page plays the natural voice
         threading.Thread(target=self._speech_worker, daemon=True).start()
 
         self.provider_name = providers.chosen(ctrl.config)
@@ -80,6 +84,8 @@ class ChatController:
             chat = self._in_flight = self._session()
             if hasattr(chat, 'on_busy'):
                 chat.on_busy = lambda: run.emit('understanding', label='Trying another model…')
+            if hasattr(chat, 'quick'):
+                chat.quick = spoken  # a spoken answer should start at once
             reply = self._converse(run, chat, (SPOKEN_HINT if spoken else '') + text, stream_to_page=not spoken)
         except Cancelled:
             if self._chat is chat:
@@ -182,6 +188,9 @@ class ChatController:
     def hush(self):
         """Stops any speech in progress (Esc or the stop button while Lumi talks)."""
         self._hush.set()
+        if self._speech:
+            self.ctrl.push('speech_stop', {})
+            self._speech[1].set()
 
     def drop_session(self):
         """A question was cancelled mid-request: its conversation may be half-written and is still in use by the
@@ -191,9 +200,47 @@ class ChatController:
 
     def speak(self, text):
         self._hush.clear()
+        if self.ctrl.config.get('voice_engine') == 'natural' and speech.available() and self._speak_naturally(text):
+            return
         done = threading.Event()
         self.speech_queue.put((text, done))
         done.wait(20 + len(text) / 5)  # speech that never finishes must not hold the microphone for ever
+
+    def _speak_naturally(self, text):
+        """Speaks through the online voice, piece by piece; the page plays it. False if nothing could be spoken
+        (offline, or the service is down), so the Windows voice can say it instead."""
+        parts = speech.synthesize(text, self.ctrl.config.get('voice_name'))
+        speech_id, done = next(self._speech_ids), threading.Event()
+        self._speech = (speech_id, done)
+        sent = 0
+        try:
+            for index, (piece, future) in enumerate(parts):
+                try:
+                    audio = future.result(speech.FIRST_WAIT if index == 0 else speech.PIECE_TIMEOUT + 1)
+                except Exception as e:
+                    print(f"Natural Voice Error: {type(e).__name__}: {e}")
+                    audio = b''
+                if self._hush.is_set():
+                    return True  # stopped: say nothing more, in either voice
+                if not audio:
+                    if not sent:
+                        return False  # nothing said yet: the Windows voice takes the whole reply
+                    break  # mid-reply: finish what's playing rather than switch voices
+                self.ctrl.push('speech', {'id': speech_id, 'audio': base64.b64encode(audio).decode(), 'last': index == len(parts) - 1})
+                sent += 1
+            if not sent:
+                return False
+            if sent < len(parts):
+                self.ctrl.push('speech', {'id': speech_id, 'audio': '', 'last': True})
+            done.wait(15 + len(text) / 8)  # the page says when it has finished; never wait for ever
+            return True
+        finally:
+            self._speech = None
+
+    def speech_done(self, speech_id):
+        current = self._speech
+        if current and current[0] == speech_id:
+            current[1].set()
 
     def close(self):
         """Ends the speech thread; called when this conversation is replaced."""
@@ -219,6 +266,8 @@ class ChatController:
             self.ctrl.push('idle', {'status': 'error', 'text': message, **({'action': action} if action else {})})
 
         r = sr.Recognizer()
+        if self.ctrl.config.get('voice_engine') == 'natural':
+            speech.warm_up(self.ctrl.config.get('voice_name'))  # while you talk, so the reply starts sooner
         try:
             run.emit('listening')
             audio = self._record(r, run)
@@ -241,6 +290,7 @@ class ChatController:
         except Exception as e:
             print(f"Microphone Error: {e}")
             return fail("I can't reach your microphone.")
+        self.ctrl.push('heard', {'text': text})  # what Lumi heard, shown while it works out the answer
         result = self.ask(text, spoken=True, run=run)
         if 'cancelled' in result or run.cancelled:
             return self.ctrl.push('idle', {'status': 'idle'})
@@ -297,7 +347,7 @@ class ChatController:
                 previous = data
             else:
                 raise sr.WaitTimeoutError("listening timed out while waiting for phrase to start")
-            while len(frames) < 100 and silent_blocks < 10:  # stop after 1 s of silence, or 10 s in total
+            while len(frames) < 100 and silent_blocks < 7:  # stop after 0.7 s of silence, or 10 s in total
                 data, level = read()
                 frames.append(data)
                 silent_blocks = silent_blocks + 1 if level < threshold else 0

@@ -44,6 +44,11 @@ class GeminiChat:
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True))
         self._chat = getattr(provider, 'first_client', provider.client).chats.create(model=self.model, config=self._config)
         self.on_busy = None  # set by chat.py: shows that Lumi is asking the backup (and counts as progress)
+        # Spoken questions skip the model's thinking step: first words in about a second instead of several
+        self.quick = False
+        self._quick_config = types.GenerateContentConfig(
+            system_instruction=system, tools=functions, thinking_config=types.ThinkingConfig(thinking_budget=0),
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True))
         self._schemas = {s['name']: s for s in tool_schemas(functions)}
 
     def send(self, message, on_text):
@@ -67,8 +72,19 @@ class GeminiChat:
             return self._read(message, on_text)
 
     def _read(self, message, on_text):
+        if self.quick and self._quick_config:
+            try:
+                return self._stream(message, on_text, self._quick_config)
+            except Exception as e:
+                if _busy(e) or type(e).__name__ == 'Cancelled':
+                    raise
+                print(f"Gemini: {self.model} won't skip thinking ({type(e).__name__}); answering the usual way")
+                self._quick_config = None
+        return self._stream(message, on_text, None)
+
+    def _stream(self, message, on_text, config):
         text, calls = '', []
-        for chunk in self._chat.send_message_stream(message):
+        for chunk in self._chat.send_message_stream(message, **({'config': config} if config else {})):
             for candidate in chunk.candidates or []:
                 for part in (candidate.content.parts if candidate.content else None) or []:
                     if part.function_call:
