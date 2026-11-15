@@ -7,18 +7,22 @@ import threading
 import time
 import winreg
 from ctypes import wintypes
+from datetime import date
 from pathlib import Path
 
 import webview
 
+from . import bridge
 from .api import IslandAPI, SettingsAPI
 from .activity import ActivityBus
+from .agents import AgentManager
 from .providers import PROVIDERS
+from .speech import VOICES
 from .apps import AppIndex
 from .credentials import migrate_from_config
 from .focus import FocusManager
-from .config import (AUTO_START_NAME, ENTRY_SCRIPT, HIT_COLOR, MIN_HEIGHT, STORAGE_PATH, TRANSPARENT_KEY,
-                     LUMI_COLORS, WINDOW_TITLE, WINDOW_WIDTH, Config)
+from .config import (AUTO_START_NAME, ENTRY_SCRIPT, FROZEN, HIT_COLOR, MIN_HEIGHT, STORAGE_PATH, TRANSPARENT_KEY,
+                     LUMI_COLORS, SKINS, WINDOW_TITLE, WINDOW_WIDTH, Config, is_christmas, seasonal_skin)
 from .hotkey import GlobalHotkey
 from .media import MediaWatcher
 from .system import MONITORINFO, SystemHelpers, Volume, list_monitors
@@ -59,6 +63,7 @@ class IslandController:
         self._stats_watching = threading.Event()  # set while the dashboard is open
         self._hidden_until = 0
         self._previous_foreground = None
+        self._season_sent = None  # the skin and Christmas flag the page last heard about
         self._snap_timer = None
         self._shake = {'x': None, 'dir': 0, 'turns': [], 'quiet_until': 0.0}
         self.hotkey_error = None
@@ -68,6 +73,7 @@ class IslandController:
         self.hotkey = GlobalHotkey(self.open_command_bar)
         self.focus = FocusManager(self.push)
         self.activity = ActivityBus(self.push)  # what Lumi is doing, as events for the page
+        self.agents = AgentManager(self)  # Claude Code and Codex sessions, run here or followed
         self.focus.milestone_allowed = self._milestone_allowed
         self._chat = None
         self._live = None
@@ -104,6 +110,7 @@ class IslandController:
         # The key or a model changed: end any live session and start the conversation afresh
         with self._chat_lock:
             if self._live and self._live.running: self._live.toggle()
+            if self._chat: self._chat.close()
             self._chat = self._live = None
 
     # --- talking to the page ---
@@ -112,11 +119,23 @@ class IslandController:
             safe_json = json.dumps({'state': state, 'data': data or {}})
             self.window.evaluate_js(f"window.updateState && window.updateState({safe_json})")
 
-    PREF_KEYS = ('motion', 'lumi_visible', 'lumi_idle', 'scroll_volume', 'hotkey', 'lumi_color', 'celebrations')
+    PREF_KEYS = ('motion', 'lumi_visible', 'lumi_idle', 'scroll_volume', 'hotkey', 'lumi_color', 'celebrations',
+                 'skin', 'seasonal_skins', 'sounds', 'sound_volume')
+
+    def active_skin(self):
+        """The skin Lumi wears today: a festive one when that's on and it's the season, otherwise the chosen one."""
+        festive = seasonal_skin(date.today()) if self.config.get('seasonal_skins') else None
+        chosen = self.config.get('skin')
+        return festive or (chosen if chosen in SKINS else 'classic')
+
+    def season(self):
+        """What the page needs to know about festive dates: today's skin, and whether Christmas moments are on."""
+        return self.active_skin(), bool(self.config.get('seasonal_skins')) and is_christmas(date.today())
 
     def prefs(self):
         values = {k: self.config.get(k) for k in self.PREF_KEYS}
-        values['lumi_hex'] = LUMI_COLORS.get(values['lumi_color'], LUMI_COLORS['cloud'])
+        self._season_sent = values['skin'], values['christmas'] = self.season()
+        values['lumi_hex'] = SKINS[values['skin']]['color'] or LUMI_COLORS.get(values['lumi_color'], LUMI_COLORS['cloud'])
         return values
 
     # --- milestones and the weekly summary ---
@@ -152,8 +171,13 @@ class IslandController:
         if key == 'anchor' and value not in ('top_center', 'free'): return 'Unknown position.'
         if key == 'motion' and value not in ('system', 'full', 'subtle', 'off', 'reduced'): return 'Unknown motion setting.'
         if key == 'lumi_color' and value not in LUMI_COLORS: return 'Unknown colour.'
+        if key == 'skin' and value not in SKINS: return 'Unknown skin.'
+        if key == 'sound_volume' and not 0 <= value <= 100: return 'Choose a volume from 0 to 100.'
+        if key == 'monitor' and value < 0: return 'Unknown display.'
         if key == 'lumi_idle' and value not in ('peek', 'always'): return 'Unknown choice.'
         if key == 'voice_mode' and value not in ('standard', 'live'): return 'Unknown voice mode.'
+        if key == 'voice_engine' and value not in ('natural', 'windows'): return 'Unknown voice.'
+        if key == 'voice_name' and value not in VOICES: return 'Unknown voice.'
         if key == 'ai_provider' and value not in PROVIDERS: return 'Unknown provider.'
         if key in AI_KEYS and key.endswith('_model') and key != 'gemini_backup_model' and not value.strip():
             return 'Enter a model name.'
@@ -163,6 +187,7 @@ class IslandController:
         if key == 'auto_start': self._apply_auto_start()
         if key in ('anchor', 'monitor'): self._snap()
         if key in AI_KEYS: self.reset_chat()
+        if key == 'agent_watch' and not value: self.agents.forget_watched()
         if key in self.PREF_KEYS: self.push('prefs', self.prefs())
         return None
 
@@ -204,9 +229,13 @@ class IslandController:
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, run_key, 0, winreg.KEY_SET_VALUE) as key:
                 if self.config.get('auto_start'):
-                    pythonw = Path(sys.executable).with_name('pythonw.exe')
-                    exe = pythonw if pythonw.exists() else Path(sys.executable)
-                    winreg.SetValueEx(key, AUTO_START_NAME, 0, winreg.REG_SZ, f'"{exe}" "{ENTRY_SCRIPT}"')
+                    if FROZEN:
+                        command = f'"{sys.executable}"'
+                    else:
+                        pythonw = Path(sys.executable).with_name('pythonw.exe')
+                        exe = pythonw if pythonw.exists() else Path(sys.executable)
+                        command = f'"{exe}" "{ENTRY_SCRIPT}"'
+                    winreg.SetValueEx(key, AUTO_START_NAME, 0, winreg.REG_SZ, command)
                 else:
                     try: winreg.DeleteValue(key, AUTO_START_NAME)
                     except FileNotFoundError: pass
@@ -243,6 +272,7 @@ class IslandController:
 
     def quit(self):
         self.hotkey.unregister()
+        self.agents.stop()
         if self.settings_window: self.settings_window.destroy()
         if self.window: self.window.destroy()
 
@@ -326,9 +356,12 @@ class IslandController:
             if busy != hidden:
                 user32.ShowWindow(self._hwnd, SW_HIDE if busy else SW_SHOWNOACTIVATE)
                 hidden = busy
+                self.push('visibility', {'hidden': hidden})  # Lumi stays quiet while out of sight
             tick += 1
             if tick % 5 == 0 and not hidden:
                 self._snap()
+            if tick % 60 == 0 and self.season() != self._season_sent:  # a festive date began or ended while running
+                self.push('prefs', self.prefs())
             time.sleep(1)
 
     # --- position and size ---
@@ -431,6 +464,9 @@ class IslandController:
         self._snap()
         for watcher in (self._watch_visibility, self._watch_pointer, self._watch_stats):
             threading.Thread(target=watcher, daemon=True).start()
+        recap = threading.Timer(25, self.offer_weekly_summary)  # once the island has settled
+        recap.daemon = True
+        recap.start()
 
     def update_hit_areas(self, shapes, page_width, content_height=0):
         # Keyed-out pixels let the mouse through, so paint the form behind the page in HIT_COLOR
@@ -495,6 +531,7 @@ class IslandController:
         SystemHelpers.start_samplers()
         self._apply_auto_start()
         self.media.start()
+        self.agents.start()
         self.hotkey_error = self.hotkey.register(self.config.get('hotkey', 'Win+Alt+Space'))
         # Load the pinned apps' icons and open the audio device now, so the command bar and volume respond instantly
         threading.Thread(target=lambda: (self.apps.ready.wait(), self.apps.pins()), daemon=True).start()
@@ -502,12 +539,13 @@ class IslandController:
 
         geo = self.config['geometry']
         free = self.config.get('anchor') == 'free'
-        # ENABLED easy_drag=True for crash-proof moving
+        bridge.harden()  # before any window exists: the bridge only takes public method names, on Lumi's own pages
+        # easy_drag would make any press-and-drag move the window, even selecting text; the page marks what drags it
         # transparent=True alone leaves a grey background on Windows; see _on_shown
         self.window = webview.create_window(
             WINDOW_TITLE,
             url='ui/island.html',
-            frameless=True, easy_drag=True, on_top=True, shadow=False,
+            frameless=True, easy_drag=False, on_top=True, shadow=False,
             transparent=True, background_color=TRANSPARENT_KEY,
             width=WINDOW_WIDTH, height=360,
             x=geo.get('x') if free else None, y=geo.get('y') if free else 0,

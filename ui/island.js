@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 const dom = {
     island: $('island'), lumi: $('lumi-container'), lumiBody: $('lumi-body'), bubble: $('speech-bubble'),
-    eyes: $('lumi-eyes'), mic: $('mic-btn'), notesUi: $('notes-ui'),
+    eyes: $('lumi-eyes'), skin: $('lumi-skin'), mic: $('mic-btn'), notesUi: $('notes-ui'),
     ramRing: $('ram-ring'), batRing: $('bat-ring'), ramVal: $('ram-val'), ramLabel: $('ram-label'),
     batVal: $('bat-val'), batLabel: $('bat-label'), netIcon: $('net-icon'), netVal: $('net-val'),
     statusUi: $('status-ui'), statusIcon: $('status-icon'), statusText: $('status-text'),
@@ -14,12 +14,18 @@ const dom = {
     cmdInput: $('cmd-input'), cmdPins: $('cmd-pins'), cmdResults: $('cmd-results'),
     card: $('card'), cardText: $('card-text'), cardStep: $('card-step'), cardPrimary: $('card-primary'), cardSecondary: $('card-secondary'),
     fpUi: $('focuspanel-ui'), fpTitle: $('fp-title'), fpToday: $('fp-today'), fpChips: $('fp-chips'), fpStart: $('fp-start'), fpTime: $('fp-time'),
-    chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input')
+    chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input'),
+    agentCurrent: $('agent-current'), agentDots: $('agent-dots'), agTabs: $('ag-tabs'), agSession: $('ag-session'), agTitle: $('ag-title'),
+    agSub: $('ag-sub'), agNodes: $('ag-nodes'), agEmpty: $('ag-empty'), agInput: $('ag-input'), agEdits: $('ag-edits'), agFolder: $('ag-folder'),
+    agFolderName: $('ag-folder-name'), agPick: $('ag-pick'), agChat: $('ag-chat'), agChatId: $('ag-chat-id'), agNew: $('ag-new'),
+    agLumi: $('ag-lumi'), agConfirm: $('ag-confirm'), agConfirmText: $('ag-confirm-text')
 };
 const api = () => window.pywebview && window.pywebview.api;
 function call(name, ...args) { const a = api(); return a && a[name] ? a[name](...args) : Promise.resolve(null); }
 
-const EXPANDED = ['dashboard', 'notes', 'music', 'menu', 'command', 'focus', 'chat'];
+const EXPANDED = ['dashboard', 'notes', 'music', 'menu', 'command', 'focus', 'chat', 'agents'];
+// These panels hold text you select with the mouse, so only their headers drag the window
+const TEXT_PANELS = ['notes', 'command', 'chat', 'agents'];
 // Where Lumi sits under each island size (the command bar's and chat's heights vary, see lumiTop)
 const LUMI_TOP = { idle: 60, dashboard: 130, music: 176, notes: 206, menu: 90, focus: 166 };
 
@@ -31,6 +37,7 @@ let focusInfo = { today: { minutes: 0, sessions: 0 }, last_minutes: 25, duration
 let focusMinutes = 25;        // the length picked in the focus panel
 let statusActive = false;     // listening, thinking or speaking is showing in the compact island
 let media = { active: false };
+let agents = { sessions: [], running: false, available: {} };  // Claude Code and Codex sessions (agents.py)
 let previewAmbient = null;  // a mood being tried out from Settings
 let toast = null;             // { kind: 'toast' | 'volume' } while a short confirmation shows
 let chatWaiting = false;
@@ -48,6 +55,7 @@ function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp
 function showBubble(text, time = 4000, isError = false) {
     clearTimeout(bubbleTimer);
     dom.bubble.textContent = text;
+    dom.bubble.classList.remove('heard');
     dom.bubble.classList.toggle('error', isError);
     dom.bubble.classList.add('visible');
     syncPeek();
@@ -91,10 +99,24 @@ const STATE_CLASS = {
     attentive: 'mood-attentive', checking: 'mood-checking', working: 'mood-working', replying: 'mood-replying',
     nod: 'mood-nod', reconsider: 'mood-reconsider', waiting: 'mood-waiting',
     surprised: 'mood-surprised', shy: 'mood-shy', sad: 'mood-sad', giggle: 'mood-giggle', happy: 'mood-happy',
-    dizzy: 'mood-dizzy', yawn: 'mood-yawn', notice: 'mood-notice', dance: 'mood-dance'
+    dizzy: 'mood-dizzy', yawn: 'mood-yawn', notice: 'mood-notice', dance: 'mood-dance', coding: 'mood-coding',
+    snowfall: 'mood-snowfall', present: 'mood-present', jingle: 'mood-jingle', brrr: 'mood-brrr', merry: 'mood-merry'
 };
+// --- SOUNDS (lumi-sounds.js): off until you say yes. Never while Lumi listens or speaks (the mic would hear it),
+// never while the island is out of sight (a full-screen app, or Hide 1 hour), and at most one every 1.5 s
+const sounds = createLumiSounds();
+let windowHidden = false, lastSound = -Infinity;
+function soundFor(name) {
+    if (!prefs.sounds || windowHidden || !sounds.has(name)) return;
+    const activity = lumiState.snapshot().activity;
+    if (activity === 'listening' || activity === 'speaking' || dom.lumi.dataset.mic !== undefined) return;
+    if (performance.now() - lastSound < 1500) return;
+    lastSound = performance.now();
+    sounds.play(name, (prefs.sound_volume ?? 60) / 100);
+}
 const lumiState = createLumiState({
     apply: s => { dom.lumi.className = STATE_CLASS[s] || 'mood-idle'; queueMicrotask(syncPeek); },
+    onReaction: name => soundFor(name),
     // A stuck "thinking" (nothing heard back for 45 s) never leaves Lumi hanging, and offers a way to try again
     onWatchdog: () => {
         if (currentRun) cancelRun();
@@ -131,13 +153,15 @@ function setPeek(on) {
 // What's true about the PC right now; shown whenever Lumi isn't busy or reacting
 function syncAmbient() {
     lumiState.setAmbient(previewAmbient || (state === 'music' ? 'music'
+        : agents.running ? 'coding'  // glasses on while Claude Code or Codex works
         : focusRunning ? (focusKind === 'break' ? 'break' : 'focus')
         : away ? 'sleepy'
         : media.active && media.playing && intensity !== 'off' ? 'dance'  // Lumi dances while music plays
         : 'idle'));
 }
 // A short happy hop after Lumi does something for you
-function celebrate() { lumiState.react('success'); }
+// Over Christmas (prefs.christmas: seasonal dress-up on, 18-26 December) it's a present instead
+function celebrate() { lumiState.react(prefs.christmas ? 'present' : 'success'); }
 
 // --- ACTIVITY (real steps of a request, from activity.py) ---
 // Each request is a run; events carry the run id and a sequence number, so late or repeated ones are ignored.
@@ -176,6 +200,13 @@ function reactToContext(name) {
     lastContextReaction = performance.now();
     lumiState.react(name);
 }
+// Over Christmas it snows on Lumi every 4-8 minutes, while it's quiet and you're around
+(function snow() {
+    setTimeout(() => {
+        if (prefs.christmas && state === 'idle' && intensity !== 'off' && !document.body.classList.contains('resting')) reactToContext('snowfall');
+        snow();
+    }, 240000 + Math.random() * 240000);
+})();
 
 function onActivity(e) {
     if (e.phase === 'run_started') {
@@ -189,7 +220,10 @@ function onActivity(e) {
     switch (e.phase) {
         case 'listening': lumiState.setActivity('listening'); return;
         case 'transcribing':
-        case 'understanding': showActivity('thinking', e.label); return;
+        case 'understanding':
+            // You've stopped talking: the pill must not go on saying "Listening" while Lumi works out the answer
+            if (e.source === 'voice' && statusActive) dom.statusUi.classList.remove('listening');
+            showActivity('thinking', e.label); return;
         case 'tool_started': showActivity(e.kind === 'lookup' ? 'checking' : 'working', e.label); return;
         // Lumi asked something and waits for your answer (for approvals and choices; no time limit)
         case 'needs_input': showActivity('waiting', e.label); return;
@@ -251,7 +285,9 @@ function addReceipt(status, text, kind) {
 }
 // A typed reply arriving piece by piece
 function onChatDelta(d) {
-    if (state !== 'chat' || cancelledRuns.has(d.run) || d.run !== currentRun && currentRun !== null) return;
+    if (cancelledRuns.has(d.run) || d.run !== currentRun && currentRun !== null) return;
+    if (d.run === currentRun) lumiState.setActivity('replying');  // text still arriving counts as progress for the watchdog
+    if (state !== 'chat') return;
     if (!streamEl) {
         if (typingEl) { typingEl.remove(); typingEl = null; }
         streamEl = addMessage('lumi', '');
@@ -279,6 +315,50 @@ function onLevel(d) {
     // Levels that stop without an "end" (say, a lost message) hand back to the normal animation
     levelTimers[kind] = setTimeout(() => onLevel({ kind, end: true }), d.pulse ? 1500 : 600);
 }
+// --- SPEECH (speech.py): Lumi's natural voice arrives as MP3 pieces; they play in order, and the mouth follows the sound ---
+const speech = { id: null, queue: [], audio: null, last: false, ctx: null, meter: null };
+function onSpeech(d) {
+    if (d.id !== speech.id) { stopSpeech(); speech.id = d.id; }
+    if (d.audio) speech.queue.push(d.audio);
+    if (d.last) speech.last = true;
+    if (!speech.audio) playNextPiece();
+}
+function playNextPiece() {
+    clearInterval(speech.meter);
+    const next = speech.queue.shift();
+    if (!next) {
+        speech.audio = null;
+        if (speech.last) finishSpeech();  // otherwise the next piece is still on its way
+        return;
+    }
+    const audio = speech.audio = new Audio('data:audio/mpeg;base64,' + next);
+    audio.onended = audio.onerror = () => { if (speech.audio === audio) playNextPiece(); };
+    try {
+        // The mouth opens with the loudness of what's playing, about 12 times a second
+        speech.ctx = speech.ctx || new AudioContext();
+        const analyser = speech.ctx.createAnalyser(), samples = new Float32Array(1024);
+        analyser.fftSize = 1024;
+        speech.ctx.createMediaElementSource(audio).connect(analyser).connect(speech.ctx.destination);
+        speech.meter = setInterval(() => {
+            analyser.getFloatTimeDomainData(samples);
+            const rms = Math.sqrt(samples.reduce((sum, v) => sum + v * v, 0) / samples.length);
+            onLevel({ kind: 'voice', value: Math.min(1, Math.round(rms * 500) / 100) });
+        }, 80);
+    } catch (e) { /* no meter: Lumi's mouth uses its own loop */ }
+    audio.play().catch(() => { if (speech.audio === audio) playNextPiece(); });
+}
+function finishSpeech() {
+    const id = speech.id;
+    stopSpeech();
+    if (id !== null) call('speech_done', id);
+}
+function stopSpeech() {
+    clearInterval(speech.meter);
+    if (speech.audio) { speech.audio.onended = speech.audio.onerror = null; speech.audio.pause(); }
+    Object.assign(speech, { id: null, queue: [], audio: null, last: false });
+    onLevel({ kind: 'voice', end: true });
+}
+
 function celebrateMilestone() { if (prefs.celebrations) lumiState.react('celebrate'); }
 
 // --- SMALL SIGNS OF LIFE ---
@@ -292,8 +372,9 @@ function resolveIntensity() {
     return ['full', 'subtle', 'off'].includes(m) ? m : 'full';
 }
 // Greeting: once a day on first open, and when you come back after being away
+const MERRY = 'Merry Christmas';  // Python's greeting on 25 December (api.py), which gets its own moment
 function greet(text) {
-    lumiState.react('greet');
+    lumiState.react(text === MERRY ? 'merry' : 'greet');
     if (text && state === 'idle' && !statusActive) showToast(text, 'toast', 2200);
 }
 // Eyes briefly look somewhere, unless Lumi is busy with something else
@@ -373,14 +454,22 @@ function applyPrefs(p) {
     html.classList.toggle('lumi-float', intensity === 'full');
     document.body.classList.toggle('lumi-hidden', !prefs.lumi_visible);
     if (prefs.lumi_hex) document.documentElement.style.setProperty('--lumi', prefs.lumi_hex);
+    setSkin(prefs.skin || 'classic');
     syncPeek();
     trackHitAreas(400);
+}
+// The skin lives in a data attribute: the mood replaces Lumi's class names, and this must survive that
+function setSkin(name) {
+    if (dom.lumi.dataset.skin === name) return;
+    dom.lumi.dataset.skin = name;
+    dom.skin.innerHTML = LUMI_SKIN_ART[name] || '';
+    trackHitAreas(400);  // a skin can change the clickable shape (the star's is smaller)
 }
 
 // --- STATE ENGINE ---
 function lumiTop(st) {
     if (peeking && st === 'idle') return PEEK_TOP;
-    if (st === 'command' || st === 'chat') return dom.island.offsetTop + parseFloat(dom.island.style.height || 300) + 16;
+    if (st === 'command' || st === 'chat' || st === 'agents') return dom.island.offsetTop + parseFloat(dom.island.style.height || 300) + 16;
     return LUMI_TOP[st] ?? 60;
 }
 function placeLumi() {
@@ -393,10 +482,10 @@ function placeLumi() {
 function setIslandState(st) {
     const leaving = state;
     state = st;
-    if (st !== 'command' && st !== 'chat') dom.island.style.height = '';
+    if (st !== 'command' && st !== 'chat' && st !== 'agents') dom.island.style.height = '';
     placeLumi();
     if (st === 'idle') renderCompact();
-    else dom.island.className = st + ' pywebview-drag-region'; // Ensure drag class stays
+    else dom.island.className = st + (TEXT_PANELS.includes(st) ? '' : ' pywebview-drag-region');
     // Compact, the island itself is the button; expanded, it's a group holding the panel's own buttons
     const compact = st === 'idle';
     dom.island.setAttribute('role', compact ? 'button' : 'group');
@@ -410,15 +499,19 @@ function setIslandState(st) {
 }
 let trackingPointer = false;
 
-// The compact island shows the most important live thing: status > confirmation > focus/break > now playing
+// The compact island shows the most important live thing: status > confirmation > an agent at work > focus/break > now playing
 function renderCompact() {
     let act = '';
+    const agent = shownAgent();
     if (statusActive) act = 'status';
     else if (toast) act = toast.kind;
+    else if (agent) act = 'agent';
     else if (focusRunning) act = 'focus';
     else if (media.active) act = 'media';
     dom.island.className = 'idle' + (act ? ' act-' + act : '') + (act === 'focus' && focusKind === 'break' ? ' break' : '')
-        + (act === 'status' && currentRun ? ' can-stop' : '') + ' pywebview-drag-region';
+        + (act === 'status' && currentRun ? ' can-stop' : '') + (act === 'agent' && agent.status !== 'running' ? ' agent-' + (agent.status === 'done' ? 'done' : 'failed') : '')
+        + ' pywebview-drag-region';
+    if (act === 'agent') renderAgentPill(agent);
     if (act === 'status') fitStatus();
     // What a screen reader hears, and what Enter will open
     else dom.island.setAttribute('aria-label', compactLabel(act));
@@ -427,6 +520,10 @@ function compactLabel(act) {
     if (act === 'media') return `Now playing: ${media.title || 'music'}${media.artist ? ' by ' + media.artist : ''}. Press Enter for the player`;
     if (act === 'focus') return `${focusKind === 'break' ? 'Break' : 'Focus'}, ${dom.focusTime.textContent} left. Press Enter for the timer`;
     if (act === 'toast') return dom.toastText.textContent;
+    if (act === 'agent') {
+        const s = shownAgent();
+        return `${s.status === 'running' ? s.agent_name + ': ' + s.current : dom.agentCurrent.textContent}. Press Enter to see its steps`;
+    }
     return 'Lumi Island. Press Enter to open the dashboard';
 }
 
@@ -496,11 +593,16 @@ window.updateState = function(msg) {
             return;
         }
         case 'onboard': startOnboarding(); return;
+        case 'guide': startGuide(data.id); return;
         case 'lumi_action': showToast(data.text); celebrate(); return; // older tools; receipts replace this
         case 'activity': onActivity(data); return;
         case 'chat_delta': onChatDelta(data); return;
         case 'level': onLevel(data); return;
+        case 'heard': showBubble('\u201C' + data.text + '\u201D', 0); dom.bubble.classList.add('heard'); return;
+        case 'speech': onSpeech(data); return;
+        case 'speech_stop': stopSpeech(); return;
         case 'shake': lumiState.react('dizzy'); return;  // you shook the island
+        case 'visibility': windowHidden = !!data.hidden; document.body.classList.toggle('window-hidden', windowHidden); return;  // hidden for a full-screen app or Hide 1 hour
         case 'preview': preview(data.name, data.label); return;
         // You've been away from the PC for 10 minutes (or just came back)
         case 'presence': {
@@ -508,7 +610,10 @@ window.updateState = function(msg) {
             away = data.away;
             if (away && !wasAway) lumiState.react('yawn');  // a yawn, then off to sleep
             syncAmbient();
-            if (wasAway && !away) greet('Welcome back'); // a little stretch on waking
+            if (wasAway && !away) {
+                if (prefs.christmas) lumiState.react('brrr');  // it's cold out there; the welcome follows
+                greet('Welcome back'); // a little stretch on waking
+            }
             return;
         }
         case 'summary': showSummary(data); return;
@@ -539,6 +644,8 @@ window.updateState = function(msg) {
             if (data.milestone) { celebrateMilestone(); showBubble(data.milestone, 5000); }
             return;
         case 'command': openCommandBar(data.pins || []); return;
+        case 'agents': onAgents(data); return;
+        case 'agents_panel': onAgents(data); openAgents(data); return;
     }
 
     // Listening/thinking/speaking take over the compact island (you started them); other statuses never close a panel
@@ -550,6 +657,7 @@ window.updateState = function(msg) {
     statusActive = statusShown && st === 'idle';
     if (st === 'focus' && 'durations' in data) { focusInfo = data; focusMinutes = data.last_minutes || 25; }
     setIslandState(st);
+    if (st !== prevState) maybeOfferGuide(st);
     if (statusActive) dom.island.setAttribute('aria-label', 'Lumi is ' + data.status);
 
     // Statuses from Python become Lumi's activity (or a reaction); the controller decides how that looks
@@ -656,6 +764,8 @@ function offerNext(data) {
 
 // --- WEEKLY SUMMARY ---
 function showSummary(data) {
+    // The weekly recap arrives by itself; it waits its turn rather than replace a card you haven't answered
+    if (!data.asked && (dom.card.classList.contains('visible') || tourStep >= 0)) { setTimeout(() => showSummary(data), 30000); return; }
     lumiState.react('notice');
     const w = data.last_week || {}, now = data.this_week || {};
     let html;
@@ -751,6 +861,17 @@ function addError(text, action) {
     div.appendChild(b);
     layoutChat();
 }
+// Lumi asks once whether it may make sounds (Python only offers it once, after the tour); a yes is answered with a jingle
+function offerSounds() {
+    if (dom.card.classList.contains('visible') || tourStep >= 0 || state !== 'idle') { setTimeout(offerSounds, 30000); return; }
+    lumiState.react('notice');
+    showCard({
+        html: 'Want me to make little sounds? Just soft ones, now and then. You can change this in Settings.',
+        primary: 'Yes, please', secondary: 'No thanks',
+        onPrimary: () => call('answer_sounds', true).then(() => { prefs.sounds = true; lumiState.react('jingle'); }),
+        onSecondary: () => call('answer_sounds', false)
+    });
+}
 function showSettingsCard(text) {
     showCard({ html: escapeHtml(text), primary: 'Open Settings', secondary: 'Not now', onPrimary: () => call('open_settings') });
 }
@@ -775,7 +896,7 @@ $('chat-close').addEventListener('click', () => collapse());
 let clickTimer = null, holdTimer = null, held = false;
 dom.lumiBody.addEventListener('click', e => {
     if (held) { held = false; return; }
-    if (e.detail >= 2) { clearTimeout(clickTimer); lumiState.react('giggle'); return; }
+    if (e.detail >= 2) { clearTimeout(clickTimer); lumiState.react(prefs.christmas ? 'jingle' : 'giggle'); return; }
     clickTimer = setTimeout(() => { if (state !== 'chat') call('open_chat'); }, 260);
 });
 dom.lumiBody.addEventListener('pointerdown', () => {
@@ -803,13 +924,13 @@ dom.lumi.addEventListener('mousemove', e => {
     }
     petLastX = e.clientX;
     petTurns = petTurns.filter(t => now - t < 1000);
-    if (petTurns.length >= 4 && now > petCooldown) { petCooldown = now + 3000; petTurns = []; lumiState.react('happy'); }
+    if (petTurns.length >= 4 && now > petCooldown) { petCooldown = now + 3000; petTurns = []; lumiState.react(prefs.christmas ? 'jingle' : 'happy'); }
 });
 dom.lumi.addEventListener('mouseleave', () => { clearTimeout(shyTimer); shyShown = false; petLastX = null; petDir = 0; petTurns = []; });
 
 // --- TRY A REACTION (Settings): plays a reaction, a working state or a mood on Lumi for a few seconds ---
 const PREVIEW_ACTIVITIES = ['listening', 'thinking', 'checking', 'working', 'replying', 'speaking', 'waiting'];
-const PREVIEW_MOODS = ['dance', 'music', 'focus', 'break', 'sleepy'];
+const PREVIEW_MOODS = ['dance', 'music', 'focus', 'break', 'sleepy', 'coding'];
 let previewTimer = null, previewLevels = null;
 function preview(name, label) {
     if (currentRun) return;  // never over a real request
@@ -841,6 +962,355 @@ function endPreview() {
     syncPeek();
 }
 
+// --- AGENTS: Claude Code and Codex, run from here or followed while you run them yourself (agents.py) ---
+// Every step is a node: what you asked, each thing the agent does, and how it ended
+const NODE_ICON = { prompt: 'i-send', think: 'i-dots', read: 'i-eye', edit: 'i-note', run: 'i-agent', search: 'i-search', web: 'i-globe',
+                    tool: 'i-plug', agent: 'i-spin', plan: 'i-list', reply: 'i-dots', error: 'i-close' };
+const SHOW_FINISHED_MS = 6000;  // a finished session stays in the compact island this long
+const agentEnded = {};          // session id -> when this page saw it finish
+let agentTab = null, agentPick = 'claude', agentCwd = '', choosingFolder = false, agentsReceived = 0;
+// The Claude Code / Codex switch decides which agent the panel shows and which one a new task goes to. It follows
+// the agent that's working until you choose one yourself while the panel is open.
+let agentPickChosen = false;
+const openNodes = new Set();   // answers you've opened to read in full (session id + node id)
+let agentNewChat = false;
+// An edit run in a folder you haven't OK'd yet waits for a yes: {key, folder, agent}; changing the task, folder,
+// agent or permission clears it
+let agentConfirm = null;
+const confirmKey = text => `${agentPick}|${agentCwd}|${text}`;  // the question is only ever about an edit run
+// Panels you've pinned stay open until you close them (Esc, the close button, or unpinning)
+const pinned = new Set();
+// Opening Explorer, the folder picker or the clipboard moves focus away for a moment; that isn't "clicking outside"
+let blurGraceUntil = 0;
+let shownNodes = '';      // "New chat" pressed: the next task starts a chat instead of replying to this one
+// The chat a reply goes to: the one shown, if it was started here and has finished its answer
+function replyTarget() {
+    const s = selectedSession();
+    return !agentNewChat && s && s.can_continue && s.agent === agentPick ? s : null;
+}
+const agentWorking = a => (agents.sessions || []).some(s => s.agent === a && s.status === 'running');
+const agentSessions = a => (agents.sessions || []).filter(s => s.agent === a);
+function followWorkingAgent() {
+    if (agentPickChosen || agentWorking(agentPick)) return;
+    const other = agentPick === 'claude' ? 'codex' : 'claude';
+    if (agentWorking(other) && agents.available[other] !== false) { agentPick = other; agentTab = null; }
+}
+
+function onAgents(d) {
+    const before = Object.fromEntries(agents.sessions.map(s => [s.id, s.status]));
+    agents = Object.assign({ sessions: [], running: false, available: {} }, d);
+    agentsReceived = performance.now();
+    for (const s of agents.sessions) {
+        if (!(s.id in before) && s.status === 'running') reactToContext('notice');  // a new session: Lumi looks up
+        if (s.source === 'island' && before[s.id] !== 'running' && s.status === 'running') showBubble('On it.', 2200);
+        if (s.source === 'island' && before[s.id] === 'running' && s.status !== 'running' && s.status !== 'stopped' && state !== 'agents')
+            showBubble(s.status === 'done' ? `${s.agent_name} is done. Have a look?` : `That didn't work out. The Agents panel says why.`, 5000, s.status !== 'done');
+        if (before[s.id] === 'running' && s.status !== 'running') {
+            agentEnded[s.id] = performance.now();
+            lumiState.react(s.status === 'done' ? 'success' : s.status === 'failed' ? 'puzzled' : 'nod');
+            setTimeout(() => { if (state === 'idle') renderCompact(); }, SHOW_FINISHED_MS + 50);
+        }
+    }
+    syncAmbient();
+    if (state === 'idle') renderCompact();
+    if (state === 'agents') { followWorkingAgent(); renderAgentsPanel(); }
+}
+// The session the compact island shows: one at work, or one that just finished
+function shownAgent() {
+    const list = agents.sessions || [];
+    return list.find(s => s.status === 'running')
+        || list.find(s => agentEnded[s.id] && performance.now() - agentEnded[s.id] < SHOW_FINISHED_MS) || null;
+}
+const agentShort = s => s.agent === 'claude' ? 'Claude' : 'Codex';
+const TAB_STATUS = { running: 'Working', done: 'Done', failed: 'Problem', stopped: 'Stopped' };
+let shownDots = '';
+function renderAgentPill(s) {
+    dom.agentCurrent.textContent = s.status === 'running' ? `${agentShort(s)} · ${s.current}`
+        : s.status === 'done' ? `${s.agent_name} is done` : s.status === 'stopped' ? `${s.agent_name} stopped` : `${s.agent_name} hit a problem`;
+    // Rebuilt only when the steps change: rebuilding on every update restarted the active dot's pulse before it showed
+    const dots = s.nodes.filter(n => n.kind !== 'prompt').slice(-7).map(n => `<i class="${n.state}"></i>`).join('');
+    if (dots !== shownDots) dom.agentDots.innerHTML = shownDots = dots;
+}
+
+function fmtElapsed(sec) { return sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${String(sec % 60).padStart(2, '0')}s`; }
+function selectedSession() {
+    const list = agentSessions(agentPick);  // running ones come first
+    return list.find(s => s.id === agentTab) || list[0] || null;
+}
+function renderAgentsPanel() {
+    const list = agentSessions(agentPick);
+    const s = selectedSession();
+    dom.agTabs.innerHTML = list.length > 1 ? list.map(x => {
+        const word = TAB_STATUS[x.status] || x.status;
+        const icon = { running: 'i-spin', done: 'i-check', failed: 'i-close', stopped: 'i-stop' }[x.status] || 'i-dots';
+        return `<button type="button" role="tab" class="ag-tab ${x.status}" data-tab="${escapeHtml(x.id)}" aria-selected="${x === s}" `
+            + `aria-controls="ag-session" tabindex="${x === s ? 0 : -1}" title="${escapeHtml(word + ' · ' + (x.title || '') + (x.folder ? ' · ' + x.folder : ''))}" `
+            + `aria-label="${escapeHtml((x.title || agentShort(x)) + ', ' + word)}"><svg class="icon" aria-hidden="true"><use href="#${icon}"/></svg>`
+            + `<span>${escapeHtml(x.title || x.folder || agentShort(x))}</span></button>`;
+    }).join('') : '';
+    dom.agEmpty.style.display = s ? 'none' : '';
+    const pickName = agentPick === 'claude' ? 'Claude Code' : 'Codex';
+    dom.agEmpty.textContent = (agents.sessions || []).length
+        ? `${pickName} has nothing going on right now. Give it a task below.`
+        : 'Tell me a task for Claude Code or Codex. I keep an eye on the sessions you run yourself, too.';
+    dom.agLumi.classList.toggle('reading', !!(s && s.status === 'running'));
+    dom.agSession.style.display = s ? '' : 'none';
+    if (s) {
+        dom.agTitle.textContent = s.title || s.agent_name;
+        dom.agTitle.title = s.title || '';
+        // Tab to a long, cut-off title to read it in full; a title that fits isn't a Tab stop
+        requestAnimationFrame(() => { dom.agTitle.tabIndex = dom.agTitle.scrollWidth > dom.agTitle.clientWidth + 1 ? 0 : -1; });
+        renderAgentMeta(s);
+        dom.agSession.classList.toggle('can-stop', s.source === 'island' && s.status === 'running');
+        const atBottom = dom.agNodes.scrollHeight - dom.agNodes.scrollTop - dom.agNodes.clientHeight < 8;
+        const nodesHtml = s.nodes.map(n => {
+            const icon = n.kind === 'end' ? (n.state === 'done' ? 'i-check' : 'i-close') : NODE_ICON[n.kind] || 'i-dots';
+            const key = s.id + '/' + n.id, open = !!n.text && openNodes.has(key);
+            const cls = `ag-node ${n.state} kind-${n.kind}${n.text ? ' has-text' : ''}${open ? ' open' : ''}`;
+            const label = n.text
+                ? `<button type="button" class="ag-label ag-open" aria-expanded="${open}" title="${open ? 'Hide the full text' : 'Read it all'}">${escapeHtml(n.label)}</button>`
+                : `<span class="ag-label">${escapeHtml(n.label)}</span>`;
+            return `<li class="${cls}" data-node="${escapeHtml(key)}"><span class="ag-dot"><svg class="icon"><use href="#${icon}"/></svg></span>`
+                + label + (n.count > 1 ? `<span class="ag-count">×${n.count}</span>` : '')
+                + `<span class="ag-detail">${escapeHtml(n.detail || '')}</span>`
+                + (open ? `<div class="ag-full">${escapeHtml(n.text)}</div>` : '') + '</li>';
+        }).join('');
+        // Rebuilt only when a step changes, so an answer you're reading keeps its place while updates arrive
+        if (nodesHtml !== shownNodes) dom.agNodes.innerHTML = shownNodes = nodesHtml;
+        // Which chat this is, and where the agent saved it
+        dom.agChat.style.display = s.chat_id ? '' : 'none';
+        dom.agChatId.textContent = s.chat_id ? `${s.agent_name} chat ${s.chat_id.slice(0, 8)}…` : '';
+        dom.agChatId.title = s.chat_id ? `${s.agent_name} saved this chat as ${s.chat_id}` : '';
+        if (atBottom) dom.agNodes.scrollTop = dom.agNodes.scrollHeight;  // follow the newest step, unless you scrolled up
+    }
+    // The form: which agent, what it may do, and where
+    dom.agPick.querySelectorAll('[data-agent]').forEach(b => {
+        const have = agents.available[b.dataset.agent] !== false;
+        const working = agentWorking(b.dataset.agent);
+        b.setAttribute('aria-checked', b.dataset.agent === agentPick);
+        b.tabIndex = b.dataset.agent === agentPick ? 0 : -1;
+        b.classList.toggle('working', working);
+        b.disabled = !have;
+        b.title = !have ? 'Not installed on this PC' : working ? 'Working now' : '';
+    });
+    // Replying continues the chat shown; "New chat" starts a fresh one in the folder below
+    const target = replyTarget();
+    const canReply = !!(s && s.can_continue && s.agent === agentPick);
+    dom.agNew.style.display = canReply ? '' : 'none';
+    dom.agNew.classList.toggle('on', agentNewChat && canReply);
+    // A run you started here is working: Lumi runs one at a time, so the box waits. On that session it says so;
+    // on another one it says which task is busy and offers to show it
+    const busy = agents.own ? (agents.sessions || []).find(x => x.source === 'island' && x.status === 'running') : null;
+    const busyHere = !!busy && !!s && busy.id === s.id;
+    dom.agInput.disabled = !!busy;
+    $('ag-run').disabled = !!busy;
+    dom.agEdits.disabled = !!busy;
+    dom.agEdits.hidden = !!busy && !busyHere;
+    $('ag-busy-go').hidden = !busy || busyHere;
+    dom.agInput.placeholder = busyHere ? `Waiting for ${busy.agent_name}…`
+        : busy ? `${busy.agent_name} is busy with “${busy.title.length > 28 ? busy.title.slice(0, 27) + '…' : busy.title}”`
+        : target ? 'Reply to this chat…' : 'What should it do?';
+    const confirming = !!agentConfirm && agentConfirm.key === confirmKey(dom.agInput.value.trim());
+    if (agentConfirm && !confirming) agentConfirm = null;
+    dom.agConfirm.hidden = !confirming;
+    if (confirming) {
+        const t = dom.agConfirmText;
+        t.textContent = `${pickName} will edit files in `;
+        const b = document.createElement('b');
+        b.textContent = agentConfirm.folder;
+        t.append(b, '. Run it?');
+    }
+    $('ag-run').classList.toggle('confirm', confirming);
+    dom.agFolderName.textContent = agentCwd ? agentCwd.split(/[\\/]/).filter(Boolean).pop() : 'Choose folder';
+    dom.agFolder.title = agentCwd || 'Choose the folder the agent works in';
+    dom.agFolder.classList.toggle('missing', !agentCwd);
+    layoutAgents();
+}
+function renderAgentMeta(s) {
+    const elapsed = s.elapsed + (s.status === 'running' ? Math.floor((performance.now() - agentsReceived) / 1000) : 0);
+    const where = s.source === 'watched' ? 'your session' : 'from Lumi';
+    dom.agSub.textContent = `${s.agent_name} · ${s.folder || where} · ${fmtElapsed(elapsed)}`;
+}
+function layoutAgents() {
+    const s = selectedSession();
+    const anyOpen = s && s.nodes.some(n => n.text && openNodes.has(s.id + '/' + n.id));
+    const nodesH = s ? (anyOpen ? 216 : Math.min(216, s.nodes.length * 30)) : 0;
+    dom.agNodes.style.height = nodesH + 'px';
+    const body = (s ? 24 + 6 + nodesH + (s.chat_id ? 22 : 0) : 34) + (dom.agConfirm.hidden ? 0 : 44);  // the bar is always one line: 38 px and the form's 6 px gap
+    dom.island.style.height = (10 + 26 + 8 + body + 8 + 26 + 6 + 36 + 10) + 'px';
+    if (state === 'agents') placeLumi();
+    trackHitAreas(400);
+}
+function openAgents(d) {
+    if (tourStep >= 0 && !guideMoving) endTour(false);
+    if (!guideMoving) hideCard();
+    statusActive = false;
+    const avail = agents.available || {};
+    // Asked for by name ("codex <task>") wins; otherwise the agent at work, then the one you used last
+    const working = (agents.sessions || []).find(s => s.status === 'running');
+    agentPick = d.pick || (working && working.agent) || d.agent || 'claude';
+    if (avail[agentPick] === false) agentPick = agentPick === 'claude' ? 'codex' : 'claude';
+    agentPickChosen = !!d.pick;
+    agentConfirm = null;
+    agentCwd = d.cwd || '';
+    agentTab = null;
+    dom.agInput.value = d.prompt || '';
+    setIslandState('agents');
+    renderAgentsPanel();
+    maybeOfferGuide('agents');
+    startGrace();
+    scheduleCollapse(pointerInside ? 600 : 4000);
+    setTimeout(() => focusAgentInput(), 30);
+}
+// The elapsed time ticks while the panel is open
+setInterval(() => { const s = state === 'agents' && selectedSession(); if (s && s.status === 'running') renderAgentMeta(s); }, 1000);
+
+// The island is still growing when the field takes focus; don't let the browser scroll the panel sideways to show it
+function focusAgentInput() { dom.agInput.focus({ preventScroll: true }); dom.island.scrollLeft = 0; }
+function chooseFolder() {
+    choosingFolder = true;
+    clearTimeout(collapseTimer);
+    return call('choose_folder').then(path => {
+        choosingFolder = false;
+        if (path) agentCwd = path;
+        if (state === 'agents') { renderAgentsPanel(); focusAgentInput(); scheduleCollapse(pointerInside ? 600 : 4000); }
+        return path;
+    });
+}
+let agentSubmitting = false;  // Enter pressed twice starts one agent
+// Enter runs read only, except while the edit question is up: then Enter answers it
+$('ag-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const confirming = !!agentConfirm && agentConfirm.key === confirmKey(dom.agInput.value.trim());
+    sendAgent(confirming ? 'edit' : 'read');
+});
+dom.agEdits.addEventListener('click', () => sendAgent('edit'));
+async function sendAgent(mode) {
+    const text = dom.agInput.value.trim();
+    if (!text) { focusAgentInput(); return; }
+    if (agentSubmitting) return;
+    agentSubmitting = true;
+    try {
+        const target = replyTarget();
+        if (!target && !agentCwd && !(await chooseFolder())) return;
+        const key = confirmKey(text);
+        const yes = mode === 'edit' && !!agentConfirm && agentConfirm.key === key;
+        const res = await call('run_agent', agentPick, text, agentCwd, mode, target ? target.id : null, yes);
+        if (res && res.confirm) {
+            const folder = (target ? target.folder : agentCwd.split(/[\\/]/).filter(Boolean).pop()) || 'this folder';
+            agentConfirm = { key, folder };
+            renderAgentsPanel();
+            focusAgentInput();
+            return;
+        }
+        if (res && res.error) { showBubble(res.error, 5000, true); return; }
+        agentConfirm = null;
+        dom.agInput.value = '';
+        agentNewChat = false;
+        renderAgentsPanel();  // the question goes away now, not when the next update arrives
+        agentTab = target ? target.id : null;  // a reply stays in its chat; a new task shows the new session
+    } finally {
+        agentSubmitting = false;
+    }
+}
+$('ag-stop').addEventListener('click', () => call('stop_agent'));
+$('ag-close').addEventListener('click', () => collapse());
+dom.agFolder.addEventListener('click', () => { agentConfirm = null; chooseFolder(); });
+dom.agInput.addEventListener('input', () => { if (agentConfirm) renderAgentsPanel(); });  // a changed task asks again
+$('ag-confirm-yes').addEventListener('click', () => sendAgent('edit'));
+$('ag-busy-go').addEventListener('click', () => {
+    const busy = (agents.sessions || []).find(x => x.source === 'island' && x.status === 'running');
+    if (!busy) return;
+    agentPick = busy.agent; agentTab = busy.id; agentPickChosen = true;
+    renderAgentsPanel();
+    dom.agTabs.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+});
+$('ag-confirm-no').addEventListener('click', () => { agentConfirm = null; renderAgentsPanel(); focusAgentInput(); });
+// Pins
+document.querySelectorAll('.panel-pin').forEach(b => b.addEventListener('click', () => {
+    const panel = b.dataset.pin;
+    pinned.has(panel) ? pinned.delete(panel) : pinned.add(panel);
+    syncPins();
+    if (!pinned.has(panel) && !pointerInside) scheduleCollapse(1500);
+}));
+function syncPins() {
+    document.querySelectorAll('.panel-pin').forEach(b => {
+        const on = pinned.has(b.dataset.pin);
+        b.setAttribute('aria-pressed', on);
+        b.title = on ? 'Stop keeping open' : 'Keep open';
+    });
+}
+dom.agPick.addEventListener('click', e => {
+    const b = e.target.closest('[data-agent]');
+    if (b && !b.disabled) {
+        pickAgent(b.dataset.agent);
+    }
+});
+dom.agNodes.addEventListener('click', e => {
+    if (e.target.closest('.ag-full')) return;  // selecting text in an open answer
+    const li = e.target.closest('.ag-node.has-text');
+    if (!li) return;
+    const key = li.dataset.node;
+    openNodes.has(key) ? openNodes.delete(key) : openNodes.add(key);
+    const fromButton = !!e.target.closest('.ag-open');
+    renderAgentsPanel();
+    if (fromButton) dom.agNodes.querySelector(`[data-node="${CSS.escape(key)}"] .ag-open`)?.focus({ preventScroll: true });
+    if (openNodes.has(key)) li.isConnected || dom.agNodes.querySelector(`[data-node="${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'nearest' });
+});
+dom.agNew.addEventListener('click', () => { agentNewChat = !agentNewChat; renderAgentsPanel(); focusAgentInput(); });
+$('ag-show-file').addEventListener('click', async () => {
+    blurGraceUntil = performance.now() + 3000;
+    const s = selectedSession();
+    const res = s && await call('show_agent_chat', s.id);
+    if (res && res.error) showBubble(res.error, 4000, true);
+});
+$('ag-copy-resume').addEventListener('click', async () => {
+    blurGraceUntil = performance.now() + 3000;
+    const s = selectedSession();
+    const res = s && await call('copy_agent_resume', s.id);
+    if (res && res.error) showBubble(res.error, 4000, true);
+    else if (res) showBubble('Copied. Paste it in a terminal to carry on this chat there.', 3500);
+});
+dom.agTabs.addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]');
+    if (b) { agentTab = b.dataset.tab; dom.agNodes.scrollTop = 1e6; renderAgentsPanel(); }
+});
+// Arrow keys move along a group (the tabs, the agent switch) and select as they go; Home and End jump to the ends
+function arrowSelect(e, items, current, choose) {
+    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    if (!(e.key in keys) && e.key !== 'Home' && e.key !== 'End') return;
+    const usable = items.filter(b => !b.disabled);
+    if (!usable.length) return;
+    e.preventDefault();
+    const i = Math.max(0, usable.indexOf(current));
+    const next = e.key === 'Home' ? usable[0] : e.key === 'End' ? usable[usable.length - 1] : usable[(i + keys[e.key] + usable.length) % usable.length];
+    choose(next);
+}
+dom.agTabs.addEventListener('keydown', e => {
+    const tabs = [...dom.agTabs.querySelectorAll('[data-tab]')];
+    arrowSelect(e, tabs, document.activeElement, b => {
+        agentTab = b.dataset.tab; dom.agNodes.scrollTop = 1e6; renderAgentsPanel();
+        dom.agTabs.querySelector(`[data-tab="${CSS.escape(agentTab)}"]`)?.focus({ preventScroll: true });
+    });
+});
+function pickAgent(agent) {
+    if (agents.available[agent] === false) return;
+    if (agent !== agentPick) { agentPick = agent; agentTab = null; agentConfirm = null; dom.agNodes.scrollTop = 1e6; }
+    agentPickChosen = true;
+    renderAgentsPanel();
+}
+dom.agPick.addEventListener('keydown', e => {
+    arrowSelect(e, [...dom.agPick.querySelectorAll('[data-agent]')], document.activeElement, b => {
+        pickAgent(b.dataset.agent);
+        dom.agPick.querySelector(`[data-agent="${b.dataset.agent}"]`).focus({ preventScroll: true });
+    });
+});
+document.addEventListener('keydown', e => {
+    if (state !== 'agents' || !e.ctrlKey || e.altKey || e.shiftKey || (e.key !== '1' && e.key !== '2')) return;
+    e.preventDefault();
+    pickAgent(e.key === '1' ? 'claude' : 'codex');
+});
+
 // --- COLLAPSING ---
 // Panels close when the mouse leaves (or on Esc), never while you're pointing at them, typing, or waiting for Lumi.
 // The command bar closes only on Esc, when you run something, or when you switch to another window.
@@ -859,20 +1329,37 @@ function updatePointer() {
 // Stay open while typing or moving through the panel with the keyboard (not after a mere click)
 function focusKeepsOpen() {
     const a = document.activeElement;
-    if (a === dom.notesArea || (a === dom.chatInput && a.value)) return true;
-    return a !== dom.island && a !== dom.chatInput && dom.island.contains(a) && a.matches(':focus-visible');
+    if (a === dom.notesArea || ((a === dom.chatInput || a === dom.agInput) && a.value)) return true;
+    return a !== dom.island && a !== dom.chatInput && a !== dom.agInput && dom.island.contains(a) && a.matches(':focus-visible');
+}
+// What keeps the open panel up: 'pin' until you close it, 'read' (an opened answer, or text you've selected in it)
+// for 15 s after the pointer leaves, or nothing
+function panelHold() {
+    if (pinned.has(state)) return 'pin';
+    if (state === 'agents') {
+        const s = selectedSession();
+        if (s && s.nodes.some(n => n.text && openNodes.has(s.id + '/' + n.id))) return 'read';
+    }
+    const sel = window.getSelection && window.getSelection();
+    if ((state === 'agents' || state === 'notes' || state === 'chat') && sel && sel.toString().trim() && dom.island.contains(sel.anchorNode)) return 'read';
+    return '';
 }
 function scheduleCollapse(delay) {
     clearTimeout(collapseTimer);
-    if (state === 'command' || (state === 'chat' && chatWaiting)) return;
+    if (state === 'command' || (state === 'chat' && chatWaiting) || choosingFolder || tourStep >= 0) return;
+    const hold = panelHold();
+    if (hold === 'pin') return;
+    if (hold === 'read') delay = Math.max(delay, 15000);
     if (!pointerSeenInside) delay = Math.max(delay, graceUntil - performance.now());
     collapseTimer = setTimeout(() => {
-        if (pointerInside || focusKeepsOpen() || (state === 'chat' && chatWaiting)) return;
+        if (pointerInside || focusKeepsOpen() || (state === 'chat' && chatWaiting) || panelHold() === 'pin') return;
         collapse();
     }, delay);
 }
 function collapse() {
     if (!EXPANDED.includes(state)) return;
+    pinned.delete(state);  // a pin lasts while the panel is open
+    syncPins();
     const wasCommand = state === 'command';
     if (dom.island.contains(document.activeElement)) document.activeElement.blur();
     window.updateState({ state: 'idle' });
@@ -893,14 +1380,18 @@ document.addEventListener('keydown', e => {
     hideCard();
     collapse();
 });
-window.addEventListener('blur', () => { if (state === 'command') { window.updateState({ state: 'idle' }); } });
+window.addEventListener('blur', () => {
+    if (state === 'command') { window.updateState({ state: 'idle' }); return; }
+    if (panelHold() === 'read' && !choosingFolder && performance.now() > blurGraceUntil) collapse();
+});
 
 // --- ACTIONS ---
 // Click (or Enter/Space on) the compact island: now playing opens the player, a running timer the focus panel,
 // anything else the dashboard. Clicks that ended a drag are ignored.
 function openFromCompact() {
     if (state !== 'idle') return;
-    if (dom.island.classList.contains('act-media')) call('open_music');
+    if (dom.island.classList.contains('act-agent')) call('open_agents');
+    else if (dom.island.classList.contains('act-media')) call('open_music');
     else if (dom.island.classList.contains('act-focus')) call('open_focus');
     else call('open_dashboard');
 }
@@ -920,10 +1411,21 @@ dom.island.addEventListener('keydown', e => {
 dom.mic.addEventListener('click', e => { e.stopPropagation(); call('start_listening'); });
 $('btn-notes').addEventListener('click', () => call('open_notes'));
 dom.btnFocus.addEventListener('click', () => call('open_focus'));
+$('btn-agents').addEventListener('click', () => call('open_agents'));
 document.querySelectorAll('[data-media]').forEach(b => b.addEventListener('click', () => call('media', b.dataset.media)));
 $('menu-settings').addEventListener('click', () => { call('open_settings'); collapseSoon(); });
 $('menu-hide').addEventListener('click', () => { collapseSoon(); call('hide_for', 60); });
 $('menu-quit').addEventListener('click', () => call('quit'));
+// Guides: the command bar, listing every guide (type to narrow it down)
+$('menu-guides').addEventListener('click', () => {
+    collapseSoon();
+    if (!guidesInfo.offered.includes('command')) guidesInfo.offered = guidesInfo.offered.concat('command');  // you came for the list, not an offer
+    setTimeout(() => call('open_command_bar').then(() => setTimeout(() => {
+        if (state !== 'command') return;
+        dom.cmdInput.value = 'guide ';
+        dom.cmdInput.dispatchEvent(new Event('input'));
+    }, 350)), 300);
+});
 // After an action that's finished with the panel (starting focus, opening Settings), close it even under the mouse
 function collapseSoon() { clearTimeout(collapseTimer); collapseTimer = setTimeout(collapse, 250); }
 
@@ -938,7 +1440,11 @@ dom.notesArea.addEventListener('input', () => {
 });
 
 // Removed manual drag logic to use Native Dragging
-window.addEventListener('contextmenu', e => { e.preventDefault(); if (state !== 'command' && state !== 'chat') call('open_menu'); });
+// Right-click opens the menu, except in a text field, where it must not swap the panel you're typing in
+window.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if (state !== 'command' && state !== 'chat' && !e.target.closest('input, textarea')) call('open_menu');
+});
 
 // Scroll on the island changes the volume, with a level shown in the island
 let lastWheel = 0;
@@ -958,12 +1464,13 @@ let cmdSeq = 0;
 
 function openCommandBar(pins) {
     reactToContext('surprised');  // summoned out of nowhere
-    if (tourStep >= 0) endTour(false);
-    hideCard();
+    if (tourStep >= 0 && !guideMoving) endTour(false);
+    if (!guideMoving) hideCard();
     statusActive = false;
     dom.cmdInput.value = '';
     renderCommand({ pins, results: [] });
     setIslandState('command');
+    maybeOfferGuide('command');
     setTimeout(() => dom.cmdInput.focus(), 30);
 }
 
@@ -1049,37 +1556,86 @@ dom.cmdInput.addEventListener('keydown', e => {
     });
 });
 
-// --- ONBOARDING ---
-const TOUR = [
-    { text: () => "Hi, I'm Lumi. Click the island any time to see your PC at a glance.", body: 'highlight-island' },
-    { text: () => 'Hover over me and press the mic to talk to me, or click me to type.', body: 'show-mic' },
-    { text: () => `Press <kbd>${escapeHtml(prefs.hotkey)}</kbd> anywhere to open apps, start focus, or ask me something.`, body: '' },
-    { text: () => "You're all set. Right-click the island for Settings.", body: '' }
-];
-let tourStep = -1;
-function startOnboarding() {
-    if (state !== 'idle') window.updateState({ state: 'idle' });
-    tourStep = 0;
-    renderTour();
-}
-function renderTour() {
-    const step = TOUR[tourStep];
-    const last = tourStep === TOUR.length - 1;
-    showCard({
-        html: step.text(), step: `${tourStep + 1} of ${TOUR.length}`,
-        primary: last ? 'Done' : 'Next', secondary: last ? '' : 'Skip',
-        onPrimary: () => { if (last) endTour(true); else { tourStep++; renderTour(); } },
-        onSecondary: () => endTour(false)
-    });
+// --- GUIDES (steps in lumi-guides.js): a short walk through each feature, found again any time under Guides ---
+// tourStep is 0 or more while a guide is showing; the panels stay open for it, and other offers wait.
+const GUIDES = Object.fromEntries((window.LUMI_GUIDES || []).map(g => [g.id, g]));
+const GUIDE_OPEN = { dashboard: 'open_dashboard', notes: 'open_notes', music: 'open_music', focus: 'open_focus', chat: 'open_chat',
+                     agents: 'open_agents', menu: 'open_menu', command: 'open_command_bar' };
+let guideReturnFocus = null;
+let tourStep = -1, guide = null, guideMoving = false, guidesInfo = { seen: [], offered: [] }, onboardingPending = false;
+// Plain text in, safe HTML out: [[Enter]] becomes a key cap and {hotkey} your shortcut
+const guideHtml = text => escapeHtml(text.replace(/\{hotkey\}/g, prefs.hotkey || 'Win+Alt+Space')).replace(/\[\[(.+?)\]\]/g, '<kbd>$1</kbd>');
+function clearGuideMarks() {
+    document.querySelectorAll('.guide-spot').forEach(el => el.classList.remove('guide-spot'));
     document.body.classList.remove('highlight-island', 'show-mic');
-    if (step.body) document.body.classList.add(step.body);
+}
+function startOnboarding() { onboardingPending = true; startGuide('start'); }
+function startGuide(id) {
+    const g = GUIDES[id];
+    if (!g) return;
+    if (tourStep >= 0) endTour(false);
+    guide = { g, i: 0 };
+    tourStep = 0;
+    guideReturnFocus = document.activeElement;
+    showGuideStep();
+}
+function showGuideStep() {
+    const { g, i } = guide, step = g.steps[i], last = i === g.steps.length - 1;
+    tourStep = i;
+    clearGuideMarks();
+    const show = () => {
+        if (!guide || guide.g !== g || guide.i !== i) return;  // closed, or moved on, while the panel opened
+        if (step.settings) call('open_settings');
+        showCard({
+            html: guideHtml(step.text), step: g.steps.length > 1 ? `${g.title} · ${i + 1} of ${g.steps.length}` : g.title,
+            primary: last ? 'Done' : 'Next', secondary: i > 0 ? 'Back' : 'Close',
+            onPrimary: () => { if (last) endTour(true); else { guide.i++; showGuideStep(); } },
+            onSecondary: () => { if (i > 0) { guide.i--; showGuideStep(); } else endTour(false); }
+        });
+        if (step.body) document.body.classList.add(step.body);
+        const spot = step.spot && document.querySelector(step.spot);
+        if (spot) spot.classList.add('guide-spot');
+        dom.cardPrimary.focus({ preventScroll: true });  // Enter for Next, Tab to Back or Close
+    };
+    const want = step.panel || state;
+    if (want === state) return show();
+    // Open the panel this step is about, then explain it once it has grown
+    hideCard();
+    guideMoving = true;
+    if (want === 'idle') window.updateState({ state: 'idle' }); else call(GUIDE_OPEN[want]);
+    setTimeout(() => { guideMoving = false; show(); }, 450);
 }
 function endTour(finished) {
     if (tourStep < 0) return;
+    const g = guide && guide.g;
     tourStep = -1;
+    guide = null;
+    clearGuideMarks();
     hideCard();
-    call('finish_onboarding');
-    if (finished) showToast("You're set");
+    if (g && g.id === 'start') { onboardingPending = false; call('finish_onboarding'); }
+    if (guideReturnFocus && guideReturnFocus.isConnected && guideReturnFocus !== document.body) guideReturnFocus.focus({ preventScroll: true });
+    guideReturnFocus = null;
+    if (g && finished) {
+        call('mark_guide', g.id, 'seen').then(info => { if (info) guidesInfo = info; });
+        showToast(g.id === 'start' ? "You're set" : 'Find this again under Guides');
+    }
+    if (EXPANDED.includes(state) && !pointerInside) scheduleCollapse(1500);
+}
+// The first time you open a feature, Lumi offers its guide, once
+function maybeOfferGuide(st) {
+    const g = (window.LUMI_GUIDES || []).find(x => x.opens === st);
+    if (!g || onboardingPending || tourStep >= 0 || guidesInfo.seen.includes(g.id) || guidesInfo.offered.includes(g.id)) return;
+    guidesInfo.offered = guidesInfo.offered.concat(g.id);
+    setTimeout(() => {
+        if (state !== st || tourStep >= 0 || dom.card.classList.contains('visible')) { guidesInfo.offered = guidesInfo.offered.filter(x => x !== g.id); return; }
+        call('mark_guide', g.id, 'offered');
+        showCard({
+            html: guideHtml(`First time here? Want a quick tour of ${g.title}? It's ${g.steps.length} short steps.`),
+            primary: 'Show me', secondary: 'Not now',
+            onPrimary: () => startGuide(g.id),
+            onSecondary: () => showToast('Any time: Guides, in the right-click menu')
+        });
+    }, 900);
 }
 
 // --- HIT AREAS AND WINDOW HEIGHT ---
@@ -1088,7 +1644,8 @@ function endTour(finished) {
 // It also reports how tall the content is, so the window can grow to fit it. Measured only while something moves.
 const hitTargets = [
     { el: dom.island, inset: 2 },
-    { el: dom.lumiBody, inset: 4, ellipse: true },
+    // The painted area must stay inside what's drawn, or it shows as a dark patch: the star needs a smaller oval
+    { el: dom.lumiBody, inset: () => (dom.lumi.dataset.skin === 'star' ? 13 : 4), ellipse: true },
     { el: dom.mic, inset: 1, ellipse: true },
     { el: dom.card, inset: 2 }
 ];
@@ -1109,12 +1666,13 @@ function reportHitAreas() {
     for (const t of hitTargets) {
         const style = getComputedStyle(t.el);
         const r = t.el.getBoundingClientRect();
-        if (style.opacity === '0' || style.display === 'none' || r.width <= 2 * t.inset || r.height <= 2 * t.inset) continue;
+        const inset = typeof t.inset === 'function' ? t.inset() : t.inset;
+        if (style.opacity === '0' || style.display === 'none' || r.width <= 2 * inset || r.height <= 2 * inset) continue;
         shapes.push({
-            x: Math.round(r.left + t.inset), y: Math.round(r.top + t.inset),
-            w: Math.round(r.width - 2 * t.inset), h: Math.round(r.height - 2 * t.inset),
+            x: Math.round(r.left + inset), y: Math.round(r.top + inset),
+            w: Math.round(r.width - 2 * inset), h: Math.round(r.height - 2 * inset),
             ellipse: !!t.ellipse,
-            radius: Math.round(Math.max(0, Math.min(parseFloat(style.borderTopLeftRadius) || 0, r.height / 2) - t.inset))
+            radius: Math.round(Math.max(0, Math.min(parseFloat(style.borderTopLeftRadius) || 0, r.height / 2) - inset))
         });
     }
     const height = contentBottom();
@@ -1151,9 +1709,12 @@ function init() {
         if (!info) return;
         applyPrefs(info.prefs);
         if (info.media) { media = info.media; renderMedia(); }
+        if (info.agents) onAgents(info.agents);
         if (info.hotkey_error) showSettingsCard(info.hotkey_error);
-        if (info.onboarding) setTimeout(startOnboarding, 1200);
+        if (info.guides) guidesInfo = info.guides;
+        if (info.onboarding) { onboardingPending = true; setTimeout(startOnboarding, 1200); }
         else if (info.greeting) setTimeout(() => greet(info.greeting), 800);
+        if (info.offer_sounds) setTimeout(offerSounds, 6000);
     });
     call('activity_snapshot').then(e => { if (e) { currentRun = e.run; lastSeq = e.seq - 1; onActivity(e); } });
     // Follow Windows if its reduced-motion setting changes while Lumi is running

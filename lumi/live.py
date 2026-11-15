@@ -5,11 +5,13 @@ import time
 
 from .chat import SYSTEM_INSTRUCTION
 from .levels import INTERVAL, LevelMeter
+from .providers.base import checked_args, tool_schemas
 
 IN_RATE, OUT_RATE = 16000, 24000   # what the Live API takes in and sends back (16-bit mono PCM)
 BLOCK = 1600                       # 0.1 s of microphone audio per message
 IDLE_TIMEOUT = 30                  # seconds without either side speaking before the session closes
-BARGE_IN_LEVEL = 1800              # while Lumi talks, only clearly louder speech counts (keeps Lumi from hearing itself)
+MAX_LIVE_TOOL_CALLS = 5            # tool calls per spoken turn, like typed chat's tool rounds
+BARGE_IN_LEVEL = 1800             # while Lumi talks, only clearly louder speech counts (keeps Lumi from hearing itself)
 
 
 def _level(data):
@@ -114,7 +116,7 @@ class LiveVoice:
         loop = asyncio.get_running_loop()
         mic = asyncio.Queue()
         playback = Playback()
-        state = {'last_activity': time.time(), 'heard': '', 'said': '', 'responding': False}
+        state = {'last_activity': time.time(), 'heard': '', 'said': '', 'responding': False, 'tool_calls': 0}
 
         def on_mic(data, frames, _time, _status):
             loop.call_soon_threadsafe(mic.put_nowait, bytes(data))
@@ -152,6 +154,7 @@ class LiveVoice:
 
     async def _receive(self, session, playback, state):
         types = self.chat.provider.types
+        schemas = {s['name']: s for s in tool_schemas(self.chat.tools.functions())}
         while True:
             async for msg in session.receive():  # one turn per pass
                 if msg.data:
@@ -179,11 +182,23 @@ class LiveVoice:
                         if state['heard'].strip(): self.chat._remember('user', state['heard'].strip())
                         if state['said'].strip(): self.chat._remember('lumi', state['said'].strip())
                         state['heard'] = state['said'] = ''
+                        state['tool_calls'] = 0
                         state['last_activity'] = time.time()
                 if msg.tool_call:
+                    # The same rules as typed chat: arguments must fit the tool, a turn gets a limited number of
+                    # tool calls, and once you stop Lumi (Esc or the mic) no further call in the batch runs
                     responses = []
                     for call in msg.tool_call.function_calls:
-                        result = self.chat.tools.run(self._activity, call.name, dict(call.args or {}))
+                        args = checked_args(schemas.get(call.name), dict(call.args or {}))
+                        if self._stop.is_set() or self._activity.cancelled:
+                            result = 'Not done: the user stopped Lumi'
+                        elif state['tool_calls'] >= MAX_LIVE_TOOL_CALLS:
+                            result = 'Not done: too many actions in one go; answer in words instead'
+                        elif args is None:
+                            result = "Failed: those arguments don't fit the tool"
+                        else:
+                            state['tool_calls'] += 1
+                            result = self.chat.tools.run(self._activity, call.name, args)
                         responses.append(types.FunctionResponse(id=call.id, name=call.name, response={'result': result}))
                     await session.send_tool_response(function_responses=responses)
             # Wait for Lumi to finish speaking before showing "listening" again

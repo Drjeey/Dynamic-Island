@@ -21,9 +21,24 @@ class POWER(ctypes.Structure):
                 ('L', ctypes.c_ulong), ('F', ctypes.c_ulong)]
 
 
+# Reachable means any one of these answers: a single address can be blocked on a network that is otherwise fine
+ONLINE_PROBES = (("1.1.1.1", 443), ("8.8.8.8", 53), ("www.microsoft.com", 443))
+
+
 class SystemHelpers:
     _ram_history = []    # one sample every 10 s, last minute only
     _online = None       # None until the first check finishes
+
+    @staticmethod
+    def reachable(quick=False):
+        """Whether the internet answers right now. quick: the two numeric addresses only, a second each (no name lookup)."""
+        for address in ONLINE_PROBES[:2] if quick else ONLINE_PROBES:
+            try:
+                socket.create_connection(address, timeout=1 if quick else 2).close()
+                return True
+            except OSError:
+                continue
+        return False
 
     @staticmethod
     def read_memory_load():
@@ -41,11 +56,7 @@ class SystemHelpers:
         def sample():
             while True:
                 SystemHelpers._ram_history = (SystemHelpers._ram_history + [SystemHelpers.read_memory_load()])[-6:]
-                try:
-                    socket.create_connection(("1.1.1.1", 443), timeout=2).close()
-                    SystemHelpers._online = True
-                except OSError:
-                    SystemHelpers._online = False
+                SystemHelpers._online = SystemHelpers.reachable()
                 time.sleep(10)
         threading.Thread(target=sample, daemon=True).start()
 

@@ -1,8 +1,14 @@
+<p align="center"><img src="design/brand/hero.png" alt="Meet Lumi: a tiny AI pet that lives in your Dynamic Island" width="100%"></p>
+
 # Dynamic-Island
 
 A Windows desktop "Dynamic Island" overlay with Lumi, a small AI pet you can talk to.
 
-## Setup
+## Install
+
+Download `LumiIsland-Setup-<version>.exe` from the [Releases](https://github.com/Drjeey/Dynamic-Island/releases) page and run it (Windows 10 or later, no admin rights needed). Windows may show a SmartScreen warning because the installer is not code-signed: choose **More info → Run anyway**. Your settings are kept in `%APPDATA%\Lumi Island`.
+
+## Run from source
 
 ```bash
 pip install -r requirements.txt
@@ -27,10 +33,13 @@ setx GEMINI_API_KEY "your-key-here"
 - **Focus:** pick 15, 25, 45 or 60 minutes (or a 5-minute break). When a session ends Lumi offers a break, and today's total is shown in the panel.
 - **Click Lumi** to chat by typing. Ask questions, or ask Lumi to do things: "focus for 45 minutes", "add milk to my note", "pause the music", "open Calculator", "how's my battery?".
 - **Press Win+Alt+Space** anywhere to open the command bar: search and open apps, ask Lumi a question, `focus 45`, `break`, `note buy milk`, `chat`, `play`, `next`, `settings`, or search the web.
+- **Agents:** open **Agents** from the dashboard to give Claude Code or Codex a task in a folder (or type `claude <task>` / `codex <task>` in the command bar). Each step shows as a node: thinking, reading, editing, running a command, then done. Sessions you run yourself show up too, and Lumi puts on its reading glasses while any of them works.
 - **Right-click** the island for Settings, Hide for 1 hour, and Quit.
 - **Scroll** on the island to change the volume; the level shows in the island.
-- **Hover** over Lumi and click the mic to talk. The first click explains where your voice is sent; click again to start. In Settings you can switch to **Live (preview)** voice, a flowing conversation you can interrupt (headphones recommended).
+- **Hover** over Lumi and click the mic at its lower right to talk (or type `talk` in the command bar). Lumi answers in a natural online voice; choose another, or the offline Windows voice, in Settings. The first click explains where your voice is sent; click again to start. In Settings you can switch to **Live (preview)** voice, a flowing conversation you can interrupt (headphones recommended).
 - **Drag** the island to another display; it snaps to the top centre. Choose "Free" in Settings to leave it where you drop it.
+- **Dress Lumi up** in Settings → Lumi and voice → Skin: cat, bunny, bear, robot, pixel, hologram, cloud, slime, sprout, pumpkin, party, or for Christmas a star, Santa hat, reindeer, snowman, gingerbread, elf or jumper. Turn on **Dress up for the season** to have Lumi change by itself for Halloween, Christmas (a different skin each day, plus snowfall, presents and a few other festive moments) and New Year.
+- **Sounds** are off until you say yes (Lumi asks once). Turn them on or set the volume in Settings → Lumi and voice. Lumi stays quiet while it's listening or speaking, and while a full-screen app is in front.
 - Panels close when the mouse leaves them, or with **Esc**. Use **Tab** to move between buttons.
 - The island hides itself while a full-screen app (video, game, slideshow) is in front.
 
@@ -52,6 +61,7 @@ The microphone uses `sounddevice`, which installs on any Python version. If `PyA
 | `lumi/live.py` | Live voice through Gemini Live |
 | `lumi/tools.py` | What Lumi can do on the island when asked |
 | `lumi/focus.py` | Focus sessions, breaks and the focus log |
+| `lumi/agents.py` | Claude Code and Codex: running them, following your own sessions, and their steps as nodes |
 | `lumi/credentials.py` | The Gemini key in Windows Credential Manager |
 | `ui/` | The island and Settings pages (HTML, CSS, JavaScript) |
 
@@ -73,5 +83,7 @@ Created next to `island7.py`. Everything here can also be changed in Settings. F
 | `gemini_model` | Chat model, default `gemini-2.5-flash` |
 | `voice_mode` | `standard` (listen, then reply) or `live` (Gemini Live, preview) |
 | `live_model` | Gemini Live model used in live mode |
+| `agent_watch` | `false` to stop showing Claude Code and Codex sessions you run yourself |
+| `agent_kind`, `agent_mode`, `agent_cwd` | The agent, permission (`edit` or `read`) and folder used last in the Agents panel |
 | `voice_notice_seen`, `live_notice_seen` | Set after the first mic click in each voice mode shows the privacy notice |
 | `onboarding_done` | Set after the getting-started tour |

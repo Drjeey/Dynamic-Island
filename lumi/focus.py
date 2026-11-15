@@ -52,12 +52,15 @@ class FocusManager:
 
     def _loop(self, session, kind, total):
         # Ticks update the countdown without taking over whatever panel is open
-        seconds = total
-        while self._session == session and seconds > 0:
+        # Counted from the clock, not from the ticks: a slow page can delay a tick, but never the end
+        end = time.monotonic() + total
+        while self._session == session:
+            seconds = round(end - time.monotonic())
+            if seconds <= 0:
+                break
             m, s = divmod(seconds, 60)
             self._push('focus_tick', {'timer': f'{m:02d}:{s:02d}', 'remaining': seconds, 'total': total, 'kind': kind})
-            time.sleep(1)
-            seconds -= 1
+            time.sleep(min(1, max(0.05, end - time.monotonic() - (seconds - 1))))
         with self._lock:
             finished = self._session == session and self.kind == kind
             if finished:
@@ -101,7 +104,12 @@ class FocusManager:
     def week_summary(self, weeks_ago=1):
         """Totals for an ISO week (1 = last week, 0 = this week so far)."""
         target = (date.today() - timedelta(weeks=weeks_ago)).isocalendar()[:2]
-        entries = [e for e in self._read() if e.get('date') and date.fromisoformat(e['date']).isocalendar()[:2] == target]
+
+        def week(entry):
+            try: return date.fromisoformat(entry['date']).isocalendar()[:2]
+            except (KeyError, TypeError, ValueError): return None  # an entry with no usable date
+
+        entries = [e for e in self._read() if week(e) == target]
         return {'minutes': sum(e.get('minutes', 0) for e in entries),
                 'sessions': sum(1 for e in entries if e.get('completed')),
                 'days': len({e['date'] for e in entries}),
@@ -111,7 +119,8 @@ class FocusManager:
     # --- log ---
     def _read(self):
         try:
-            return json.loads(FOCUS_LOG_PATH.read_text(encoding='utf-8')) if FOCUS_LOG_PATH.exists() else []
+            data = json.loads(FOCUS_LOG_PATH.read_text(encoding='utf-8')) if FOCUS_LOG_PATH.exists() else []
+            return [e for e in data if isinstance(e, dict)] if isinstance(data, list) else []
         except Exception as e:
             print(f"Focus Log Error: {e}")
             return []
@@ -126,7 +135,7 @@ class FocusManager:
     def today(self):
         today = date.today().isoformat()
         entries = [e for e in self._read() if e.get('date') == today]
-        return {'minutes': sum(e.get('minutes', 0) for e in entries), 'sessions': len(entries)}
+        return {'minutes': sum(e.get('minutes', 0) for e in entries), 'sessions': sum(1 for e in entries if e.get('completed'))}
 
     def state(self):
         return {'running': self.active, 'kind': self.kind, 'today': self.today(),

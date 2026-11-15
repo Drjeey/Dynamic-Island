@@ -1,10 +1,12 @@
-pywebview
+# Pinned: lumi/bridge.py hooks into pywebview's internals, and lumi/chat.py passes an https endpoint to SpeechRecognition
+pywebview==6.2.1
 google-genai
 anthropic
 openai
-SpeechRecognition
+SpeechRecognition==3.17.0
 sounddevice
 pyttsx3
+edge-tts
 pycaw
 pywin32
 keyring

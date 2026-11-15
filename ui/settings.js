@@ -25,14 +25,18 @@ function syncPositionRow() {
     $('monitor').disabled = free;
 }
 
-let values = {}, providers = {}, keys = {};
+// Not "keys": pywebview runs every reply beside a global `var keys`, and a clash makes the page drop them all
+let values = {}, providers = {}, keyInfo = {};
 
 function load() {
     api().get().then(res => {
-        ({ values, providers, keys } = res);
-        const { monitors, hotkey_error, colors } = res;
+        ({ values, providers, keys: keyInfo } = res);
+        const { monitors, hotkey_error, colors, skins } = res;
         for (const key of TOGGLES) $(key).checked = !!values[key];
         renderSwatches(colors, values.lumi_color);
+        renderSkins(skins, colors);
+        $('sound_volume').value = values.sound_volume ?? 60;
+        syncSoundRow();
         document.querySelectorAll('input[name=anchor]').forEach(r => { r.checked = r.value === values.anchor; });
         $('monitor').innerHTML = monitors.map((m, i) => `<option value="${i}">${m}</option>`).join('');
         $('monitor').value = String(Math.min(values.monitor, monitors.length - 1));
@@ -41,6 +45,9 @@ function load() {
         $('row-lumi-idle').classList.toggle('disabled', !values.lumi_visible);
         $('hotkey').value = values.hotkey;
         $('voice_mode').value = values.voice_mode;
+        $('voice_choice').innerHTML = Object.entries(res.voices).map(([id, name]) => `<option value="${id}">${name} (natural)</option>`).join('')
+            + '<option value="windows">Windows voice (works offline)</option>';
+        $('voice_choice').value = values.voice_engine === 'windows' ? 'windows' : values.voice_name;
         $('live_model').value = values.live_model;
         $('custom_url').value = values.custom_url;
         $('ai_provider').innerHTML = Object.entries(providers).map(([name, p]) => `<option value="${name}">${p.label}</option>`).join('');
@@ -52,7 +59,7 @@ function load() {
     });
 }
 
-const TOGGLES = ['auto_start', 'hide_in_fullscreen', 'scroll_volume', 'lumi_visible', 'celebrations', 'weekly_summary'];
+const TOGGLES = ['auto_start', 'hide_in_fullscreen', 'scroll_volume', 'lumi_visible', 'celebrations', 'weekly_summary', 'agent_watch', 'seasonal_skins', 'sounds'];
 const COLOR_NAMES = { cloud: 'Cloud', peach: 'Peach', mint: 'Mint', sky: 'Sky', lilac: 'Lilac', butter: 'Butter' };
 
 // Lumi's colour: a swatch per preset, with a small live preview of Lumi on the island's black
@@ -62,13 +69,43 @@ function renderSwatches(colors, current) {
     $('preview-blob').style.background = colors[current] || colors.cloud;
     document.querySelectorAll('input[name=lumi_color]').forEach(r => r.addEventListener('change', () => {
         $('preview-blob').style.background = colors[r.value];
+        document.querySelector('[data-skin=classic] .skin-lumi')?.style.setProperty('--body', colors[r.value]);
         save('lumi_color', r.value);
     }));
 }
 
+// A tile for each skin, drawn with the same art as the island. Picking one brings Lumi out to show it off
+const SKIN_FACE = '<rect fill="#1C1C1E" class="eye-open" x="17" y="15" width="8" height="12" rx="4"/><rect fill="#1C1C1E" class="eye-open" x="35" y="15" width="8" height="12" rx="4"/>'
+    + '<circle fill="#FFF" class="eye-glint" cx="22.4" cy="17.8" r="1.6"/><circle fill="#FFF" class="eye-glint" cx="40.4" cy="17.8" r="1.6"/>'
+    + '<circle fill="#FFF" class="eye-glint" cx="19.3" cy="23.6" r=".75"/><circle fill="#FFF" class="eye-glint" cx="37.3" cy="23.6" r=".75"/>'
+    + '<g class="tile-cheeks" fill="#FF8FA3" opacity=".3"><ellipse cx="13" cy="30" rx="3.2" ry="1.9"/><ellipse cx="47" cy="30" rx="3.2" ry="1.9"/></g>';
+function renderSkins(skins, colors) {
+    $('skins').innerHTML = Object.entries(skins).map(([key, skin]) =>
+        `<label class="skin-tile" data-skin="${key}"><input type="radio" name="skin" value="${key}" aria-label="${skin.name}" ${key === values.skin ? 'checked' : ''}>`
+        + `<span class="skin-stage"><span class="skin-lumi lumi-shape" style="--body:${skin.color || colors[values.lumi_color] || colors.cloud}">`
+        + `<svg viewBox="0 0 60 50" aria-hidden="true">${LUMI_SKIN_ART[key] || ''}${SKIN_FACE}</svg></span></span>`
+        + `<span class="skin-name">${skin.name}</span></label>`).join('');
+    document.querySelectorAll('input[name=skin]').forEach(r => r.addEventListener('change', () => {
+        save('skin', r.value).then(res => {
+            if (!res.ok) return;
+            values.skin = r.value;
+            syncColorRow();
+            api().preview('happy');
+        });
+    }));
+    syncColorRow();
+}
+// The colour swatches paint only the Classic skin; the others bring their own colours
+function syncColorRow() {
+    const classic = values.skin === 'classic';
+    $('row-color').classList.toggle('disabled', !classic);
+    $('color-help').textContent = classic ? "Lumi's body colour" : 'The Classic skin only. This skin has its own colours.';
+    document.querySelectorAll('input[name=lumi_color]').forEach(r => { r.disabled = !classic; });
+}
+
 // The rows below the provider follow the chosen provider: its key, its model, and (for "Other") its server
 function syncProvider() {
-    const name = $('ai_provider').value, p = providers[name], key = keys[name];
+    const name = $('ai_provider').value, p = providers[name], key = keyInfo[name];
     $('row-url').classList.toggle('gone', name !== 'custom');
     $('row-backup').classList.toggle('gone', name !== 'gemini');
     $('gemini_backup_model').value = values.gemini_backup_model || '';
@@ -113,6 +150,15 @@ $('monitor').addEventListener('change', () => save('monitor', parseInt($('monito
 $('motion').addEventListener('change', () => save('motion', $('motion').value));
 $('lumi_idle').addEventListener('change', () => save('lumi_idle', $('lumi_idle').value));
 $('lumi_visible').addEventListener('change', () => $('row-lumi-idle').classList.toggle('disabled', !$('lumi_visible').checked));
+// The volume only matters with sounds on; letting go of the slider plays a jingle at the new volume
+function syncSoundRow() {
+    $('row-volume').classList.toggle('disabled', !$('sounds').checked);
+    $('sound_volume').disabled = !$('sounds').checked;
+}
+$('sounds').addEventListener('change', syncSoundRow);
+$('sound_volume').addEventListener('change', () => {
+    save('sound_volume', parseInt($('sound_volume').value, 10)).then(res => { if (res.ok) api().preview('jingle'); });
+});
 
 // Text fields save on their Save button (or Enter)
 $('form-hotkey').addEventListener('submit', e => { e.preventDefault(); save('hotkey', $('hotkey').value, $('msg-hotkey')).then(r => { if (r.ok) load(); }); });
@@ -142,10 +188,41 @@ $('form-key').addEventListener('submit', e => {
     if (value) saveKey(value);
 });
 $('remove-key').addEventListener('click', () => saveKey(''));
+// One list for both settings: a natural voice by name, or the built-in Windows voice
+$('voice_choice').addEventListener('change', async () => {
+    const choice = $('voice_choice').value, natural = choice !== 'windows';
+    if (natural) await save('voice_name', choice);
+    const res = await save('voice_engine', natural ? 'natural' : 'windows', $('msg-voice'));
+    if (res.ok) Object.assign(values, { voice_engine: natural ? 'natural' : 'windows' }, natural ? { voice_name: choice } : {});
+});
+$('test-voice').addEventListener('click', () => api().test_voice());
 $('voice_mode').addEventListener('change', () => { save('voice_mode', $('voice_mode').value, $('msg-voice')).then(syncVoiceRow); syncVoiceRow(); });
 $('form-live-model').addEventListener('submit', e => { e.preventDefault(); save('live_model', $('live_model').value.trim(), $('msg-voice')); });
-$('replay').addEventListener('click', () => api().replay_tour());
+// Guides: one row each, built from lumi-guides.js; a tick for the ones you've finished
+async function renderGuides() {
+    const box = $('guides-list');
+    const seen = new Set(((await api().guides()) || []).filter(g => g.seen).map(g => g.id));
+    box.querySelectorAll('.row').forEach(r => r.remove());
+    for (const g of window.LUMI_GUIDES || []) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const label = document.createElement('div');
+        label.className = 'label';
+        const b = document.createElement('b'), span = document.createElement('span');
+        b.textContent = g.title + (seen.has(g.id) ? '  ✓' : '');
+        span.textContent = g.blurb;
+        label.append(b, span);
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'btn'; btn.textContent = 'Show me';
+        btn.setAttribute('aria-label', 'Show the guide: ' + g.title);
+        btn.addEventListener('click', () => api().start_guide(g.id));
+        row.append(label, btn);
+        box.append(row);
+    }
+}
 document.querySelectorAll('[data-preview]').forEach(b => b.addEventListener('click', () => api().preview(b.dataset.preview)));
 
-if (api() && api().get) load();
-else window.addEventListener('pywebviewready', load);
+if (api() && api().get) { load(); renderGuides(); }
+else window.addEventListener('pywebviewready', () => { load(); renderGuides(); });
+// Back from a guide: the ticks may have changed
+window.addEventListener('focus', () => { if (api() && api().guides) renderGuides(); });

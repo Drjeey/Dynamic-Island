@@ -75,6 +75,20 @@ select, input[type=text], input[type=password] { background: var(--control); bor
 .swatch span { position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--control-border); }
 .swatch input:checked + span { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent); }
 .swatch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 4px; }
+#voice_choice { width: 170px; flex: none; }
+input[type="range"] { width: 200px; accent-color: var(--accent); cursor: pointer; }
+.skin-row { flex-direction: column; align-items: stretch; gap: 12px; }
+.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.skin-tile { position: relative; display: flex; flex-direction: column; gap: 4px; font-size: 12px; text-align: center; cursor: pointer; }
+.skin-tile input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.skin-stage { height: 84px; border-radius: 8px; background: #0B0B0D; display: flex; align-items: center; justify-content: center; }
+.skin-tile:hover .skin-stage { background: #1A1A1F; }
+.skin-tile input:checked ~ .skin-stage { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent); }
+.skin-tile input:focus-visible ~ .skin-stage { outline: 2px solid var(--accent); outline-offset: 5px; }
+.skin-tile input:checked ~ .skin-name { font-weight: 600; }
+.skin-lumi { width: 60px; height: 50px; margin-top: 8px; display: block; }
+[data-skin="robot"] .tile-cheeks, [data-skin="pixel"] .tile-cheeks, [data-skin="hologram"] .tile-cheeks, [data-skin="star"] .tile-cheeks { display: none; }
+.skin-lumi svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .lumi-preview { width: 52px; height: 40px; display: flex; align-items: center; justify-content: center; background: #0B0B0D; border-radius: 10px; flex: none; }
 .preview-blob { width: 30px; height: 25px; border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%; background: #F2F2F7; display: flex; gap: 6px; align-items: center; justify-content: center; transition: background 0.2s; }
 .preview-blob i { width: 4px; height: 6px; border-radius: 2px; background: #1C1C1E; }

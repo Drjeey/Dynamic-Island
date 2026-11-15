@@ -1,0 +1,70 @@
+﻿<!doctype html><meta charset="utf-8">
+<style>
+  *{box-sizing:border-box;margin:0}
+  html,body{width:1600px;height:1000px;background:#F2F2F7;font-family:Inter,"Segoe UI Variable Display","Segoe UI",sans-serif;color:#1C1C1E;overflow:hidden}
+  .stage{position:relative;width:1600px;height:1000px;overflow:hidden;background:#F2F2F7}
+  .rings{position:absolute;left:810px;top:0px;width:900px;height:900px}
+  .rings i{position:absolute;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
+  .copy{position:absolute;left:96px;top:76px;width:760px}
+  .tag{display:inline-flex;gap:10px;align-items:center;font-weight:600;font-size:22px;color:#6b6b72;background:#fff;border-radius:999px;padding:10px 20px;box-shadow:0 2px 10px #0001}
+  .tag b{width:10px;height:10px;border-radius:50%;background:#34C77B}
+  h1{font-size:140px;line-height:.92;letter-spacing:-5px;font-weight:800;margin-top:26px}
+  h1 span{background:linear-gradient(95deg,#FF9A6B,#F5B83D);-webkit-background-clip:text;color:transparent}
+  p.sub{font-size:30px;line-height:1.3;color:#6b6b72;margin-top:22px;width:660px;font-weight:500}
+  .btns{display:flex;gap:18px;margin-top:30px;align-items:center}
+  .dl{background:#1C1C1E;color:#fff;font-weight:700;font-size:24px;padding:18px 34px;border-radius:999px;display:flex;gap:14px;align-items:center}
+  .dl svg{width:26px;height:26px}
+  .req{font-size:22px;color:#8a8a92;font-weight:500}
+  .island{position:absolute;left:1050px;top:70px;width:420px;height:92px;border-radius:46px;background:#0c0c0e;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 38px;font-weight:600;font-size:30px;box-shadow:0 18px 40px #0003}
+  .island .d{width:16px;height:16px;border-radius:50%;background:#F5B83D;margin-right:16px}
+  .island .t{font-variant-numeric:tabular-nums;color:#FFE9B0}
+  .lumi{position:absolute;left:1000px;top:230px;width:520px;filter:drop-shadow(0 40px 36px #d9a98d66)}
+  .skin{position:absolute;width:190px;filter:drop-shadow(0 16px 16px #0002)}
+  .bubble{position:absolute;background:#fff;border-radius:26px;padding:16px 26px;font-weight:600;font-size:26px;white-space:nowrap;box-shadow:0 10px 30px #0002}
+  .cards{position:absolute;left:96px;right:96px;bottom:40px;display:grid;grid-template-columns:repeat(5,1fr);gap:20px}
+  .card{background:#fff;border-radius:30px;padding:26px 28px;box-shadow:0 4px 18px #0000000d;height:190px}
+  .card .dot{width:16px;height:16px;border-radius:50%;margin-bottom:14px}
+  .card h3{font-size:30px;font-weight:800;letter-spacing:-.5px}
+  .card p{font-size:19px;line-height:1.35;color:#6b6b72;margin-top:6px;font-weight:500}
+</style>
+<div class="stage">
+  <div class="rings">
+    <i style="width:900px;height:900px;background:#FFE9DE"></i><i style="width:720px;height:720px;background:#FFE0D0"></i>
+    <i style="width:540px;height:540px;background:#FFD9C4"></i><i style="width:360px;height:360px;background:#FFD0B8"></i>
+  </div>
+
+  <div class="copy">
+    <span class="tag"><b></b>Free for Windows</span>
+    <h1>Meet<br><span>Lumi.</span></h1>
+    <p class="sub">A tiny AI pet that lives in your Dynamic Island. Chat, focus and put agents to work.</p>
+    <div class="btns">
+      <div class="dl"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Download for Windows</div>
+      <span class="req">Windows 10 or later</span>
+    </div>
+  </div>
+
+  <div class="island"><span style="display:flex;align-items:center"><i class="d"></i>Focus</span><span class="t">24:10</span></div>
+
+  <svg class="lumi" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="b" cx="30%" cy="22%" r="85%"><stop offset="0" stop-color="#FFEBDF"/><stop offset=".55" stop-color="#FFD9C4"/><stop offset="1" stop-color="#F0BCA2"/></radialGradient></defs>
+    <path d="M240 8 C392 0 474 100 470 212 C466 322 380 394 236 392 C92 390 8 322 12 208 C16 96 96 12 240 8Z" fill="url(#b)" stroke="#E2B7A0" stroke-width="7"/>
+    <ellipse cx="100" cy="246" rx="38" ry="22" fill="#FF8FA3" opacity=".6"/><ellipse cx="380" cy="246" rx="38" ry="22" fill="#FF8FA3" opacity=".6"/>
+    <path d="M128 190 Q160 130 192 190 M288 190 Q320 130 352 190" fill="none" stroke="#1C1C1E" stroke-width="17" stroke-linecap="round"/>
+  </svg>
+
+  <img class="skin" src="skin-cat.png" style="left:900px;top:540px;width:170px;transform:rotate(-8deg)">
+  <img class="skin" src="skin-bunny.png" style="left:1440px;top:310px;width:140px;transform:rotate(7deg)">
+  <img class="skin" src="skin-star.png" style="left:1380px;top:520px;width:150px;transform:rotate(6deg)">
+  <div class="bubble" style="left:820px;top:290px">Focus for 45 minutes</div>
+  <div class="bubble" style="left:1270px;top:200px;background:#4C8DFF;color:#fff">Done. Starting now.</div>
+
+  <div class="cards">
+    <div class="card"><div class="dot" style="background:#4C8DFF"></div><h3>Just ask</h3><p>Type or talk. Lumi can do things, too.</p></div>
+    <div class="card"><div class="dot" style="background:#F5B83D"></div><h3>Stay focused</h3><p>Focus sessions, breaks and a daily total.</p></div>
+    <div class="card"><div class="dot" style="background:#B98CFF"></div><h3>Agents at work</h3><p>Run Claude Code or Codex, watch each step.</p></div>
+    <div class="card"><div class="dot" style="background:#FF8FA3"></div><h3>Dress Lumi up</h3><p>18 skins, plus a new one every day at Christmas.</p></div>
+    <div class="card"><div class="dot" style="background:#34C77B"></div><h3>One shortcut</h3><p>Win + Alt + Space opens the command bar.</p></div>
+  </div>
+</div>
+
+

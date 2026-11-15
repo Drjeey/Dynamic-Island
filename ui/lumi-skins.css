@@ -1,0 +1,57 @@
+/* Lumi's body and each skin's shape, shared by the island and the Settings picker. The drawings are in lumi-skins.js.
+   --body is Lumi's colour right now: moods set it, so body and accessories always tint together. */
+.lumi-shape {
+    position: relative;
+    background-color: var(--body);
+    border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%;
+    /* Form: light from the top left, shade to the bottom right, and a thin darker rim so pale skins keep an edge on
+       light wallpapers. All inside the body, so nothing see-through meets the window's colour key */
+    --shade: inset 4px 5px 9px rgba(255, 255, 255, 0.42), inset -4px -7px 11px rgba(0, 0, 0, 0.13), inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shade);
+    transition: background-color 0.3s;
+}
+.skin-part { fill: var(--body); transition: fill 0.3s; }
+
+[data-skin="bear"] .lumi-shape { border-radius: 50% 50% 46% 46% / 54% 54% 46% 46%; }
+[data-skin="robot"] .lumi-shape { border-radius: 13px; }
+/* Stepped corners, built from two bars so the listening ring (a box-shadow) still works */
+[data-skin="pixel"] .lumi-shape {
+    border-radius: 0; --shade: 0 0 0 0 transparent; background-color: transparent;
+    background-image: linear-gradient(var(--body), var(--body)), linear-gradient(var(--body), var(--body));
+    background-size: 100% calc(100% - 8px), calc(100% - 8px) 100%;
+    background-position: 0 4px, 4px 0;
+    background-repeat: no-repeat;
+}
+[data-skin="pixel"] .eye-open { rx: 0.5px; }
+[data-skin="pixel"] .eye-glint { opacity: 0; }
+[data-skin="hologram"] .lumi-shape { border-radius: 50% 50% 40% 40% / 58% 58% 42% 42%; }
+[data-skin="hologram"] .lumi-shape::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.34) 0 1px, transparent 1px 4px);
+}
+[data-skin="cloud"] .lumi-shape { border-radius: 46%; --shade: 0 0 0 0 transparent; }
+[data-skin="slime"] .lumi-shape { border-radius: 48% 52% 44% 44% / 72% 72% 28% 28%; }
+[data-skin="sprout"] .lumi-shape { border-radius: 50% 50% 48% 48% / 42% 42% 58% 58%; }
+[data-skin="gingerbread"] .lumi-shape { border-radius: 48%; }
+/* The star's body is drawn in lumi-skins.js, so the usual one steps aside. The listening ring would be a box around a
+   star, so it's off here: the blue tint and wider eyes still say "listening" */
+[data-skin="star"] .lumi-shape { background-color: transparent; box-shadow: none !important; border-radius: 0; }
+[data-skin="star"] .star-body { stroke: var(--body); transition: fill 0.3s, stroke 0.3s; }
+/* A knitted Christmas jumper from the collar down: part of the body's own fill, so it follows Lumi's shape exactly.
+   Layers, top first: white dots knitted into the green band, the band, the ribbed hem, the collar, the red jumper */
+[data-skin="jumper"] .lumi-shape {
+    background-image:
+        radial-gradient(circle, #FFFFFF 0 1.1px, transparent 1.5px),
+        linear-gradient(transparent 81%, #2E8B57 81% 89%, transparent 89%),
+        repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 4px),
+        linear-gradient(transparent 70%, #A82A30 70% 75%, #C8343A 75%);
+    background-size: 6px 4px, 100% 100%, 100% 4px, 100% 100%;
+    background-position: 1px 84.5%, 0 0, 0 100%, 0 0;
+    background-repeat: repeat-x, no-repeat, no-repeat, no-repeat;
+}
+[data-skin="pumpkin"] .lumi-shape { border-radius: 48% 48% 46% 46% / 52% 52% 48% 48%; }
+/* On the body, not in the drawing: the face tilts with some moods, and a projector's floor shouldn't */
+[data-skin="hologram"] .lumi-shape::after {
+    content: ''; position: absolute; left: 10px; right: 10px; bottom: -6px; height: 5px;
+    border-radius: 50%; background: #3FBFC0;
+}

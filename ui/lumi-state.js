@@ -14,7 +14,8 @@
     const MIN_MS = { attentive: 300, thinking: 400, checking: 500, working: 500 };
     // How long each reaction plays
     const REACTION_MS = { success: 1200, celebrate: 1400, greet: 900, puzzled: 2500, nod: 380, reconsider: 650,
-                          surprised: 900, shy: 1800, sad: 2200, giggle: 1100, happy: 1400, dizzy: 1800, yawn: 1600, notice: 1000 };
+                          surprised: 900, shy: 1800, sad: 2200, giggle: 1100, happy: 1400, dizzy: 1800, yawn: 1600, notice: 1000,
+                          snowfall: 3300, present: 1800, jingle: 1400, brrr: 1300, merry: 1800 };
     // States that wait on something outside Lumi; if nothing changes for this long, Lumi gives up on them
     const WATCHED = new Set(['thinking', 'checking', 'working', 'attentive', 'replying']);
     // Reactions that replace the one playing instead of waiting behind it
@@ -28,6 +29,7 @@
         const clearTimer = options.clearTimer || (id => clearTimeout(id));
         const watchdogMs = options.watchdogMs || 45000;
         const onWatchdog = options.onWatchdog || (() => {});
+        const onReaction = options.onReaction || (() => {});  // a reaction starting (its sound, if any)
 
         let ambient = 'idle', activity = null, reaction = null;
         let queue = [];
@@ -52,6 +54,7 @@
 
         function startReaction(name) {
             reaction = name;
+            onReaction(name);
             reactionTimer = setTimer(() => {
                 reaction = null; reactionTimer = null;
                 if (queue.length) startReaction(queue.shift());

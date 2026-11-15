@@ -1,15 +1,24 @@
 import json
+import os
+import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 
 # --- PATHS ---
-BASE_DIR = Path(__file__).resolve().parent.parent
+VERSION = '1.0.0'
+FROZEN = getattr(sys, 'frozen', False)   # True in the installed (PyInstaller) build
+BASE_DIR = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent.parent))  # where the code and ui/ are
 ENTRY_SCRIPT = BASE_DIR / 'island7.py'
 UI_DIR = BASE_DIR / 'ui'
-CONFIG_PATH = BASE_DIR / 'config.json'
-NOTES_PATH = BASE_DIR / 'notes.txt'
-FOCUS_LOG_PATH = BASE_DIR / 'focus_log.json'
+# Installed copies live in Program Files (read-only, replaced on update), so settings go to %APPDATA%.
+# Running from source keeps them beside the code, as before.
+DATA_DIR = Path(os.environ.get('APPDATA', Path.home())) / 'Lumi Island' if FROZEN else BASE_DIR
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+CONFIG_PATH = DATA_DIR / 'config.json'
+NOTES_PATH = DATA_DIR / 'notes.txt'
+FOCUS_LOG_PATH = DATA_DIR / 'focus_log.json'
 STORAGE_PATH = Path(tempfile.gettempdir()) / 'island_lumi_storage'
 
 # --- WINDOW ---
@@ -34,7 +43,14 @@ DEFAULT_CONFIG = {
     "motion": "system",                # "system" follows Windows; or "full" / "subtle" / "off"
     "lumi_visible": True,
     "lumi_idle": "peek",               # "peek": tucked under the island until Lumi has something to say; "always"
-    "lumi_color": "cloud",             # one of LUMI_COLORS
+    "lumi_color": "cloud",             # one of LUMI_COLORS; the Classic skin's colour
+    "skin": "classic",                 # one of SKINS
+    "seasonal_skins": False,           # dress up for Halloween, Christmas and New Year, then go back to "skin"
+    "sounds": False,                   # Lumi's sound effects (ui/lumi-sounds.js); off until you say yes
+    "sound_volume": 60,                # 0-100
+    "sounds_offered": False,           # Lumi asks once whether it may make sounds
+    "guides_seen": [],                 # guides you've finished (ui/lumi-guides.js)
+    "guides_offered": [],              # guides Lumi has offered on a feature's first use; each is offered once
     "celebrations": True,              # a short moment for focus milestones
     "weekly_summary": True,            # Lumi offers last week's focus recap once a week
     "last_summary_week": "",
@@ -49,15 +65,23 @@ DEFAULT_CONFIG = {
     "openai_model": "gpt-5-mini",
     "custom_model": "llama3.2",
     "custom_url": "http://localhost:11434/v1",  # Ollama's default; LM Studio uses http://localhost:1234/v1
+    "voice_engine": "natural",         # how Lumi speaks: "natural" (online, see speech.py) or "windows" (offline, built in)
+    "voice_name": "en-US-AvaNeural",   # one of speech.VOICES
     "voice_mode": "standard",          # "standard": record, then reply; "live": streaming conversation (Gemini Live)
     "live_model": "gemini-2.5-flash-native-audio-preview-09-2025",
+    "agent_watch": True,               # follow Claude Code and Codex sessions running on this PC (reads their local logs)
+    "agent_kind": "claude",            # the agent picked last in the Agents panel: claude or codex
+    "agent_mode": "read",              # "edit": the agent may change files in its folder; "read": it may only look (the safe start)
+    "agent_edit_folders": [],          # folders you've said yes to an agent editing; the first edit run anywhere else asks first
+    "agent_cwd": "",                   # the folder the agent worked in last
     "voice_notice_seen": False,
     "live_notice_seen": False,
     "onboarding_done": False,
 }
 
 VOICE_NOTICE = ("Before we chat: your voice goes to Google to turn it into text, "
-                "and your words go to {provider} for my reply. Click the mic again to start.")
+                "and your words go to {provider} for my reply.{spoken} Click the mic again to start.")
+NATURAL_VOICE_NOTICE = " My replies are sent to Microsoft to be spoken."
 LIVE_VOICE_NOTICE = ("Before we chat: in live mode your voice streams straight to Gemini while the mic is on. "
                      "Click the mic again to start.")
 
@@ -65,13 +89,43 @@ LIVE_VOICE_NOTICE = ("Before we chat: in live mode your voice streams straight t
 # The API key is handled separately (credentials.py) so it never lands in config.json.
 EDITABLE = {
     'anchor': str, 'monitor': int, 'auto_start': bool, 'hide_in_fullscreen': bool, 'scroll_volume': bool,
-    'motion': str, 'lumi_visible': bool, 'hotkey': str, 'voice_mode': str, 'live_model': str,
+    'motion': str, 'lumi_visible': bool, 'hotkey': str, 'voice_mode': str, 'voice_engine': str, 'voice_name': str, 'live_model': str,
     'ai_provider': str, 'gemini_model': str, 'gemini_backup_model': str, 'claude_model': str, 'openai_model': str, 'custom_model': str, 'custom_url': str,
-    'lumi_color': str, 'celebrations': bool, 'weekly_summary': bool, 'lumi_idle': str,
+    'lumi_color': str, 'skin': str, 'seasonal_skins': bool, 'sounds': bool, 'sound_volume': int, 'celebrations': bool, 'weekly_summary': bool, 'lumi_idle': str,
+    'agent_watch': bool,
 }
 
 # Lumi's colour presets (soft, light tints so the dark eyes stay readable)
 LUMI_COLORS = {'cloud': '#F2F2F7', 'peach': '#FFD9C4', 'mint': '#C9F0DA', 'sky': '#CFE2FF', 'lilac': '#E2D6FF', 'butter': '#FFF0B8'}
+
+# Lumi's skins, in the order Settings shows them: name and body colour (light enough for the dark eyes).
+# Classic uses LUMI_COLORS. The drawings are in ui/lumi-skins.js and the shapes in ui/lumi-skins.css.
+SKINS = {
+    'classic': {'name': 'Classic', 'color': None},
+    'cat': {'name': 'Cat', 'color': '#F4B183'}, 'bunny': {'name': 'Bunny', 'color': '#F1ECF6'}, 'bear': {'name': 'Bear', 'color': '#CDA782'},
+    'robot': {'name': 'Robot', 'color': '#BFD0DE'}, 'pixel': {'name': 'Pixel', 'color': '#9FE3A2'}, 'hologram': {'name': 'Hologram', 'color': '#7FE9E2'},
+    'cloud': {'name': 'Cloud', 'color': '#E6F0FF'}, 'slime': {'name': 'Slime', 'color': '#A5E57C'}, 'sprout': {'name': 'Sprout', 'color': '#EADBB8'},
+    'santa': {'name': 'Santa hat', 'color': '#FBEFE6'}, 'reindeer': {'name': 'Reindeer', 'color': '#A9805E'},
+    'snowman': {'name': 'Snowman', 'color': '#F7FBFF'}, 'gingerbread': {'name': 'Gingerbread', 'color': '#C9874F'},
+    'elf': {'name': 'Elf', 'color': '#FFE0C7'}, 'star': {'name': 'Star', 'color': '#FFD45C'},
+    'jumper': {'name': 'Jumper', 'color': '#FFE7D1'},
+    'pumpkin': {'name': 'Pumpkin', 'color': '#F6A23F'}, 'party': {'name': 'Party', 'color': '#FFD7E8'},
+}
+# One a day over Christmas, in turn from 18 December, so the Star (your followers' idea) opens it and is on Christmas Day
+CHRISTMAS_SKINS = ('star', 'santa', 'reindeer', 'snowman', 'gingerbread', 'elf', 'jumper')
+
+
+def is_christmas(day):
+    """18 to 26 December: Christmas skins and Christmas moments, when seasonal dress-up is on."""
+    return day.month == 12 and 18 <= day.day <= 26
+
+
+def seasonal_skin(day):
+    """The skin for a festive date, or None."""
+    if day.month == 10 and day.day >= 24: return 'pumpkin'
+    if is_christmas(day): return CHRISTMAS_SKINS[(day.day - 18) % len(CHRISTMAS_SKINS)]
+    if (day.month, day.day) in ((12, 31), (1, 1)): return 'party'
+    return None
 
 
 class Config(dict):
@@ -80,6 +134,7 @@ class Config(dict):
     def __init__(self):
         super().__init__(json.loads(json.dumps(DEFAULT_CONFIG)))  # deep copy so the defaults are never mutated
         self._timer = None
+        self._save_lock = threading.Lock()
         if CONFIG_PATH.exists():
             try:
                 saved = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))
@@ -87,10 +142,28 @@ class Config(dict):
                 self.update({k: v for k, v in saved.items() if k in DEFAULT_CONFIG})
             except Exception as e:
                 print(f"Config Load Error: {e}")
+                # Unreadable settings: keep a copy before the defaults overwrite them at the next save
+                try: os.replace(CONFIG_PATH, CONFIG_PATH.with_name(CONFIG_PATH.name + '.bak'))
+                except OSError: pass
 
     def save(self):
-        try: CONFIG_PATH.write_text(json.dumps(self, indent=2), encoding='utf-8')
-        except Exception as e: print(f"Config Save Error: {e}")
+        # Written beside the file and swapped in, so a crash or power cut mid-save can't leave half a file
+        tmp = CONFIG_PATH.with_name(CONFIG_PATH.name + '.tmp')
+        with self._save_lock:
+            try:
+                text = json.dumps(self, indent=2)
+                tmp.write_text(text, encoding='utf-8')
+                for attempt in range(20):  # up to about a second
+                    try:
+                        os.replace(tmp, CONFIG_PATH)
+                        return
+                    except PermissionError:  # another program has the file open for a moment
+                        time.sleep(0.05)
+                # Still held open: write it the plain way rather than lose the change
+                CONFIG_PATH.write_text(text, encoding='utf-8')
+                tmp.unlink(missing_ok=True)
+            except Exception as e:
+                print(f"Config Save Error: {e}")
 
     def save_soon(self, delay=0.5):
         # Dragging fires many events per second; only write once things settle

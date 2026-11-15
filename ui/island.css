@@ -4,10 +4,15 @@
     --island: #0B0B0D;
     --tile: #18181C;
     --tile-hover: #222228;
+    /* Raised surfaces are lit from above, like Lumi: a touch lighter at the top, and a hairline of light on the top edge */
+    --surface: linear-gradient(180deg, #1F1F25, #17171B);
+    --surface-hover: linear-gradient(180deg, #28282F, #1F1F25);
+    --lift: inset 0 1px 0 rgba(255, 255, 255, 0.07);
     --hairline: rgba(255, 255, 255, 0.08);
     --text: #F2F2F5;
     --text-2: #A3A3AD;
     --lumi: #F2F2F7;
+    --body: var(--lumi);  /* Lumi's colour right now: moods replace it */
     --eye: #1C1C1E;
     --blue: #4C8DFF;    /* listening / active */
     --blue-strong: #2E6BE0;  /* blue behind white text (4.9:1) */
@@ -47,7 +52,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #island {
     position: absolute;
     top: 10px; left: 50%; transform: translateX(-50%);
-    background: var(--island);
+    background: linear-gradient(180deg, #111114, #09090B);
     border-radius: 17px;
     border: 1px solid var(--hairline);
     box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12); /* no outer shadow: it would smear into the transparency key */
@@ -71,6 +76,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #island.idle.act-volume { width: 210px; }
 #island.idle.act-focus { width: 220px; border-color: rgba(245, 184, 61, 0.35); }
 #island.idle.act-media { width: 232px; }
+#island.idle.act-agent { width: 270px; }
 .compact { gap: 8px; padding: 0 14px; box-sizing: border-box; font-size: 13px; font-weight: 600; }
 .compact svg.icon { width: 16px; height: 16px; }
 #status-ui.listening { color: var(--blue); }
@@ -124,21 +130,24 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 /* Only the active state's content is shown */
 .content { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; opacity: 0; visibility: hidden; position: absolute; inset: 0; transition: opacity 0.18s ease, visibility 0s 0.18s; }
 #island.act-status #status-ui, #island.act-toast #toast-ui, #island.act-volume #volume-ui, #island.act-focus #focus-ui, #island.act-media #media-ui,
+#island.act-agent #agent-ui,
 #island.dashboard #dashboard-ui, #island.music #music-ui, #island.notes #notes-ui, #island.menu #menu-ui, #island.command #command-ui,
-#island.focus #focuspanel-ui, #island.chat #chat-ui {
+#island.focus #focuspanel-ui, #island.chat #chat-ui, #island.agents #agents-ui {
     opacity: 1; visibility: visible; transition: opacity 0.2s ease 0.14s, visibility 0s; /* fade in once the shape has mostly settled */
 }
 
 /* --- DASHBOARD --- */
 .stats-container { display: flex; gap: 8px; padding: 0 12px; width: 100%; box-sizing: border-box; }
-.tile { flex: 1 1 auto; height: 76px; border-radius: 16px; background: var(--tile); display: flex; align-items: center; gap: 8px; padding: 0 10px; box-sizing: border-box; }
-button.tile { justify-content: center; flex-direction: column; gap: 6px; flex: 0 0 64px; padding: 0; transition: background 0.15s, transform 0.12s; }
-button.tile:hover { background: var(--tile-hover); }
+.tile { flex: 1 1 auto; height: 76px; border-radius: 16px; background: var(--surface); box-shadow: var(--lift); display: flex; align-items: center; gap: 8px; padding: 0 10px; box-sizing: border-box; }
+button.tile { justify-content: center; flex-direction: column; gap: 6px; flex: 0 0 58px; padding: 0; transition: background 0.15s, transform 0.12s; }
+button.tile:hover { background: var(--surface-hover); }
 button.tile:active { transform: scale(0.96); }
 button.tile span { font-size: 11px; color: var(--text-2); }
 #btn-focus svg.icon { color: var(--amber); }
-.ring { width: 36px; height: 36px; flex: none; border-radius: 50%; background: conic-gradient(var(--color) var(--pct), rgba(255,255,255,0.07) 0deg); display: flex; align-items: center; justify-content: center; position: relative; }
-.ring::after { content: ''; position: absolute; width: 28px; height: 28px; background: var(--tile); border-radius: 50%; }
+.ring { width: 36px; height: 36px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
+/* Only the band is painted (the middle is masked out), so the ring sits on any surface */
+.ring::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--color) var(--pct), rgba(255,255,255,0.09) 0deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4.5px), #000 calc(100% - 4px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4.5px), #000 calc(100% - 4px)); }
 .ring svg.icon { position: relative; z-index: 2; width: 16px; height: 16px; color: var(--color); }
 .ring.high { --color: var(--amber) !important; }
 .stat-text { display: flex; flex-direction: column; min-width: 0; }
@@ -151,7 +160,9 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 
 /* --- NOTES --- */
 #notes-ui { padding: 16px 20px; box-sizing: border-box; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 6px; }
-.notes-header { font-size: 11px; color: var(--text-2); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; display: flex; justify-content: space-between; }
+.notes-header { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.notes-header svg.icon { width: 18px; height: 18px; color: var(--text-2); }
+.notes-header span:first-of-type { flex: 1; }
 #notes-area { flex: 1; background: transparent; border: none; color: var(--text); font-size: 14px; line-height: 1.45; resize: none; font-family: inherit; padding: 0; user-select: text; }
 #notes-area::placeholder { color: var(--text-2); }
 #notes-area:focus-visible { outline: none; }
@@ -160,12 +171,12 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 /* An empty note shows a small line drawing (a sheet and a pencil) behind the placeholder */
 #notes-ui.empty::after { content: ''; position: absolute; right: 18px; bottom: 14px; width: 64px; height: 48px; opacity: 0.5; pointer-events: none;
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48' fill='none' stroke='%23A3A3AD' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 6h26l8 8v28H10z'/%3E%3Cpath d='M36 6v8h8M16 20h20M16 26h16M16 32h10'/%3E%3Cpath d='M40 40l14-14 4 4-14 14h-4z'/%3E%3Cpath d='M58 14l1.5-3 1.5 3-3 1.5z'/%3E%3C/svg%3E") center / contain no-repeat; }
-.save-indicator { color: var(--green); opacity: 0; transition: opacity 0.3s; text-transform: none; letter-spacing: 0; }
+.save-indicator { color: var(--green); font-size: 12px; font-weight: 400; opacity: 0; transition: opacity 0.3s; }
 
 /* --- MUSIC --- */
-#music-ui { flex-direction: column; padding: 18px 20px 14px; box-sizing: border-box; gap: 12px; }
+#music-ui { flex-direction: column; padding: 16px 20px 12px; box-sizing: border-box; gap: 8px; }
 .music-top { display: flex; width: 100%; align-items: center; gap: 14px; min-width: 0; }
-.album-art { width: 52px; height: 52px; border-radius: 12px; background: var(--tile) center / cover no-repeat; color: var(--violet); display: flex; align-items: center; justify-content: center; flex: none; }
+.album-art { width: 60px; height: 60px; border-radius: 14px; background: linear-gradient(140deg, #33284F, #1B1826) center / cover no-repeat; box-shadow: var(--lift); color: var(--violet); display: flex; align-items: center; justify-content: center; flex: none; }
 .album-art.has-art svg { display: none; }
 .album-art.paused { opacity: 0.7; }
 .track-info { flex: 1; display: flex; flex-direction: column; min-width: 0; gap: 2px; }
@@ -173,10 +184,11 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .track-sub { font-size: 12px; color: var(--text-2); }
 .controls { display: flex; width: 100%; justify-content: center; gap: 28px; align-items: center; }
 .btn-media { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text); opacity: 0.85; transition: background 0.15s, transform 0.12s; }
-.btn-media:hover { background: var(--tile); opacity: 1; }
+.btn-media:hover { background: var(--surface-hover); opacity: 1; }
 .btn-media:active { transform: scale(0.92); }
-.btn-media.primary { width: 44px; height: 44px; background: var(--text); color: var(--island); opacity: 1; }
+.btn-media.primary { width: 44px; height: 44px; background: linear-gradient(180deg, #FFFFFF, #DCDCE4); color: var(--island); opacity: 1; }
 .btn-media.primary:hover { background: #FFFFFF; }
+.album-art svg.icon { width: 24px; height: 24px; }
 #music-ui.empty .controls { display: none; }
 
 /* --- FOCUS PANEL --- */
@@ -187,14 +199,14 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .fp-setup, .fp-running { display: flex; flex-direction: column; gap: 12px; }
 #focuspanel-ui.running .fp-setup, #focuspanel-ui:not(.running) .fp-running { display: none; }
 .fp-chips { display: flex; gap: 6px; }
-.fp-chip { flex: 1; height: 32px; border-radius: 16px; background: var(--tile); font-size: 13px; font-variant-numeric: tabular-nums; transition: background 0.12s; }
-.fp-chip:hover { background: var(--tile-hover); }
-.fp-chip[aria-checked="true"] { background: var(--amber); color: var(--island); font-weight: 600; }
+.fp-chip { flex: 1; height: 32px; border-radius: 16px; background: var(--surface); box-shadow: var(--lift); font-size: 13px; font-variant-numeric: tabular-nums; transition: background 0.12s; }
+.fp-chip:hover { background: var(--surface-hover); }
+.fp-chip[aria-checked="true"] { background: linear-gradient(180deg, #FFC95A, #F0AE2C); color: var(--island); font-weight: 600; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35); }
 .fp-actions { display: flex; gap: 8px; }
 .fp-primary, .fp-secondary { height: 34px; border-radius: 17px; font-size: 13px; padding: 0 16px; transition: background 0.12s, transform 0.12s; }
-.fp-primary { flex: 1; background: var(--amber); color: var(--island); font-weight: 600; }
-.fp-secondary { background: var(--tile); color: var(--text); }
-.fp-secondary:hover { background: var(--tile-hover); }
+.fp-primary { flex: 1; background: linear-gradient(180deg, #FFC95A, #F0AE2C); color: var(--island); font-weight: 600; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.fp-secondary { background: var(--surface); box-shadow: var(--lift); color: var(--text); }
+.fp-secondary:hover { background: var(--surface-hover); }
 .fp-primary:active, .fp-secondary:active { transform: scale(0.97); }
 .fp-running { flex-direction: row; align-items: center; }
 .fp-time { flex: 1; font-family: var(--font-mono); font-size: 34px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -210,8 +222,8 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .chat-log::-webkit-scrollbar { width: 6px; }
 .chat-log::-webkit-scrollbar-thumb { background: #2A2A30; border-radius: 3px; }
 .msg { max-width: 84%; padding: 7px 11px; border-radius: 14px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
-.msg.user { align-self: flex-end; background: #1E3A66; border-bottom-right-radius: 4px; }
-.msg.lumi { align-self: flex-start; background: var(--tile); border-bottom-left-radius: 4px; }
+.msg.user { align-self: flex-end; background: linear-gradient(180deg, #24467C, #1B3560); box-shadow: var(--lift); border-bottom-right-radius: 4px; }
+.msg.lumi { align-self: flex-start; background: var(--surface); box-shadow: var(--lift); border-bottom-left-radius: 4px; }
 .msg.error { align-self: flex-start; background: transparent; color: var(--text-2); padding-left: 4px; }
 .msg.error::before { content: ''; display: inline-block; width: 13px; height: 13px; margin-right: 5px; vertical-align: -2px; background: var(--red); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; }
 /* The way out of an error: Open Settings or Try again, right where the error is */
@@ -226,26 +238,153 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 #chat-input::placeholder { color: var(--text-2); }
 #chat-input:focus-visible { outline: none; }
 .chat-form:focus-within { box-shadow: inset 0 0 0 1.5px rgba(76, 141, 255, 0.55); }
-.chat-send { width: 28px; height: 28px; border-radius: 14px; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; }
+.chat-send { width: 28px; height: 28px; border-radius: 14px; background: linear-gradient(180deg, #5E9BFF, #3D7DF0); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3); color: #fff; display: flex; align-items: center; justify-content: center; }
 .chat-send svg.icon { width: 16px; height: 16px; stroke-width: 2.2; }
-.chat-send:disabled { background: #2A2A30; color: var(--text-2); }
-.chat-send.stop { background: #2A2A30; color: var(--text); }
+.chat-send:disabled { background: #2A2A30; box-shadow: none; color: var(--text-2); }
+.chat-send.stop { background: #2A2A30; box-shadow: none; color: var(--text); }
 .chat-send.stop svg.icon { fill: currentColor; width: 13px; height: 13px; }
-.glyph-lumi { width: 20px; height: 16px; flex: none; background: var(--lumi); border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%; position: relative; }
+.glyph-lumi { width: 20px; height: 16px; flex: none; box-shadow: inset 1.5px 2px 3px rgba(255, 255, 255, 0.45), inset -1.5px -2.5px 4px rgba(0, 0, 0, 0.14); background: var(--lumi); border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%; position: relative; }
 .glyph-lumi::before, .glyph-lumi::after { content: ''; position: absolute; top: 5px; width: 3px; height: 4px; border-radius: 2px; background: var(--eye); }
 .glyph-lumi::before { left: 5px; } .glyph-lumi::after { right: 5px; }
 
+/* --- AGENTS (Claude Code and Codex) --- */
+/* Each step an agent takes is a node: grey when done, blue and pulsing while it runs, red if it failed */
+#island.agents { width: 480px; border-radius: 24px; }  /* height is set from the steps shown */
+#agent-ui { color: var(--text); }
+#agent-ui > svg.icon { color: var(--blue); }
+#agent-ui #agent-current { flex: 1; min-width: 0; }
+#island.agent-done #agent-ui > svg.icon { color: var(--green); }
+#island.agent-failed #agent-ui > svg.icon { color: var(--red); }
+.agent-dots { display: flex; align-items: center; gap: 3px; flex: none; }
+.agent-dots i { width: 6px; height: 6px; border-radius: 50%; background: #3A3A42; }
+.agent-dots i.done { background: var(--text-2); }
+.agent-dots i.failed { background: var(--red); }
+.agent-dots i.active { background: var(--blue); animation: node-pulse 1.2s ease-in-out infinite; }
+@keyframes node-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0.6); } 50% { box-shadow: 0 0 0 3px rgba(76, 141, 255, 0); } }
+
+#agents-ui { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 10px; box-sizing: border-box; gap: 8px; cursor: default; }
+.ag-head-icon { width: 16px !important; height: 16px !important; color: var(--blue); }
+.ag-tabs { display: flex; gap: 4px; min-width: 0; }
+.ag-tab { height: 22px; max-width: 150px; padding: 0 9px; border-radius: 11px; font-size: 11px; color: var(--text-2); background: transparent; display: flex; align-items: center; gap: 5px; }
+.ag-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-tab::before { content: none; }
+.ag-tab svg.icon { width: 12px; height: 12px; flex: none; color: var(--text-2); stroke-width: 2.2; }
+.ag-tab.running svg.icon { color: var(--blue); }
+.ag-tab.done svg.icon { color: var(--green); }
+.ag-tab.failed svg.icon { color: var(--red); }
+.ag-tab:hover { background: var(--tile); color: var(--text); }
+.ag-tab[aria-selected="true"] { background: var(--tile); color: var(--text); }
+.ag-session { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.ag-meta { display: flex; align-items: center; gap: 8px; padding: 0 6px; font-size: 12px; }
+.ag-title { flex: 1; min-width: 0; font-weight: 600; }
+.ag-sub { color: var(--text-2); flex: none; font-variant-numeric: tabular-nums; }
+.ag-stop { display: none; height: 22px; padding: 0 10px; border-radius: 11px; font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.08); color: var(--text); }
+.ag-stop:hover { background: rgba(255,255,255,0.16); }
+.ag-session.can-stop .ag-stop { display: block; }
+.ag-nodes { list-style: none; margin: 0; padding: 0 4px; overflow-y: auto; max-height: 216px; user-select: text; }
+.ag-nodes::-webkit-scrollbar { width: 6px; }
+.ag-nodes::-webkit-scrollbar-thumb { background: #2A2A30; border-radius: 3px; }
+.ag-node { position: relative; display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 4px; font-size: 12.5px; }
+/* The line joining each node to the next */
+.ag-node:not(:last-child)::after { content: ''; position: absolute; left: 14px; top: 23px; height: 14px; width: 2px; border-radius: 1px; background: #2A2A30; }
+.ag-node.done:not(:last-child)::after { background: #3A3A42; }
+.ag-dot { width: 22px; height: 22px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: var(--tile); color: var(--text-2); box-sizing: border-box; border: 1.5px solid #3A3A42; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+.ag-dot svg.icon { width: 12px; height: 12px; stroke-width: 2; }
+.ag-node.active .ag-dot { border-color: var(--blue); color: var(--blue); animation: node-ring 1.4s ease-out infinite; }
+.ag-node.failed .ag-dot { border-color: var(--red); color: var(--red); }
+.ag-node.kind-prompt .ag-dot { background: var(--lumi); border-color: var(--lumi); color: var(--eye); }
+.ag-node.kind-end.done .ag-dot { background: var(--green); border-color: var(--green); color: var(--island); }
+@keyframes node-ring { 0% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0.55); } 80%, 100% { box-shadow: 0 0 0 6px rgba(76, 141, 255, 0); } }
+.ag-label { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-node.active .ag-label { color: var(--text); font-weight: 600; }
+.ag-node.done .ag-label { color: var(--text-2); }
+.ag-node.kind-prompt .ag-label, .ag-node.kind-end .ag-label { color: var(--text); }
+.ag-count { flex: none; font-size: 10.5px; color: var(--text-2); background: var(--tile); border-radius: 8px; padding: 1px 6px; }
+/* An answer you can open: the step grows to show it in full */
+.ag-node.has-text { cursor: pointer; }
+.ag-node.has-text:hover .ag-label { color: var(--text); }
+.ag-node.open { height: auto; min-height: 30px; flex-wrap: wrap; align-content: flex-start; padding-top: 4px; padding-bottom: 6px; }
+.ag-node.open .ag-detail { display: none; }
+.ag-full { flex-basis: 100%; margin: 2px 0 0 34px; padding: 8px 10px; border-radius: 10px; background: var(--tile); color: var(--text);
+    font-size: 12px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 170px; overflow-y: auto; cursor: text; user-select: text; }
+.ag-chat { display: flex; align-items: center; gap: 10px; height: 22px; padding: 0 8px; font-size: 11px; color: var(--text-2); }
+.ag-chat-id { flex: 1; min-width: 0; }
+.ag-link { flex: none; font-size: 11px; color: var(--blue); padding: 0; background: none; }
+.ag-link:hover { text-decoration: underline; }
+.ag-chip.on { background: var(--tile); color: var(--text); box-shadow: inset 0 0 0 1px var(--blue); }
+.ag-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); font-family: var(--font-mono); font-size: 11px; }
+.ag-node.kind-end .ag-detail, .ag-node.kind-reply .ag-detail { font-family: var(--font); font-size: 12px; }
+.ag-form { display: flex; flex-direction: column; gap: 6px; }
+.ag-options { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.ag-seg { display: flex; background: var(--tile); border-radius: 13px; padding: 2px; flex: none; }
+.ag-seg button { height: 22px; padding: 0 10px; border-radius: 11px; font-size: 11.5px; color: var(--text-2); }
+.ag-seg button[aria-checked="true"] { background: #2C2C34; box-shadow: var(--lift); color: var(--text); font-weight: 600; }
+.ag-seg button:disabled { opacity: 0.4; cursor: default; }
+/* An agent with a session running: a small pulsing dot, so you can see who's at work whichever one is picked */
+.ag-seg button { position: relative; }
+.ag-seg button.working::after { content: ''; position: absolute; top: 3px; right: 4px; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--blue); }  /* steady: Lumi reading along already says it's working */
+.ag-chip { height: 26px; padding: 0 10px; border-radius: 13px; background: var(--surface); box-shadow: var(--lift); font-size: 11.5px; color: var(--text-2); display: flex; align-items: center; gap: 6px; flex: none; }
+.ag-chip:hover { background: var(--surface-hover); color: var(--text); }
+/* The permission chip says plainly when the agent may change files: amber, with a pencil */
+.ag-chip.edit { color: var(--amber); background: rgba(245, 184, 61, 0.09); box-shadow: inset 0 0 0 1px rgba(245, 184, 61, 0.55); }
+.ag-chip.edit:hover { background: rgba(245, 184, 61, 0.16); color: var(--amber); }
+/* Asked once per folder before an agent edits it */
+.ag-confirm { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 6px 4px 10px; border-radius: 12px;
+    background: rgba(245, 184, 61, 0.10); box-shadow: inset 0 0 0 1px rgba(245, 184, 61, 0.40); font-size: 12px; color: var(--text); }
+.ag-confirm[hidden] { display: none; }
+.ag-confirm svg.icon { width: 14px; height: 14px; color: var(--amber); flex: none; }
+.ag-confirm-text { flex: 1; min-width: 0; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-confirm-text b { font-weight: 600; color: var(--amber); display: inline-block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.ag-confirm { height: 38px; box-sizing: border-box; }
+.ag-confirm-yes { font-size: 12px; font-weight: 600; color: #1A1408; background: var(--amber); padding: 5px 12px; border-radius: 8px; flex: none; }
+.ag-confirm-yes:hover { filter: brightness(1.08); }
+.chat-send.confirm { background: var(--amber); color: #1A1408; }
+#ag-input:disabled, #ag-run:disabled { opacity: 0.45; cursor: default; }
+.ag-edits { flex: none; height: 28px; padding: 0 10px; border-radius: 14px; display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600;
+    color: var(--amber); background: rgba(245, 184, 61, 0.09); box-shadow: inset 0 0 0 1px rgba(245, 184, 61, 0.5); white-space: nowrap; }
+.ag-edits svg.icon { width: 13px; height: 13px; }
+.ag-edits:hover { background: rgba(245, 184, 61, 0.17); }
+.ag-edits:disabled { opacity: 0.4; cursor: default; }
+.ag-edits[hidden], .ag-busy-go[hidden] { display: none; }
+.ag-busy-go { flex: none; font-size: 12px; }
+/* The task row holds two buttons: a real 4px inset around them, inside the same 36px pill */
+#ag-form .chat-form { box-sizing: border-box; padding-top: 4px; padding-bottom: 4px; }
+/* Pin: keep a panel open while you work beside it */
+.panel-pin[aria-pressed="true"] { color: var(--blue); background: var(--tile); }
+.panel-pin[aria-pressed="true"] svg.icon { fill: currentColor; }
+.notes-header .panel-pin { margin-left: 4px; width: 22px; height: 22px; }
+/* An answer you can open from the keyboard too */
+.ag-open { background: none; padding: 0; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; border-radius: 4px; }
+.ag-node .ag-open:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, 0.3); }
+/* The whole task, when you point at or tab to a long title */
+.ag-title:focus-visible { white-space: normal; overflow: visible; }
+.ag-chip svg.icon { width: 13px; height: 13px; }
+.ag-folder { flex: 1 1 auto; min-width: 0; }
+.ag-folder.missing { color: var(--amber); }
+#ag-input { flex: 1; background: transparent; border: 0; color: var(--text); font: 13px var(--font); user-select: text; caret-color: var(--blue); }
+#ag-input::placeholder { color: var(--text-2); }
+#ag-input:focus-visible { outline: none; }
+
 /* --- MENU (right-click) --- */
 #menu-ui { gap: 6px; padding: 0 10px; box-sizing: border-box; }
-.menu-item { flex: 1; height: 44px; border-radius: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; transition: background 0.15s, transform 0.12s; }
-.menu-item:hover { background: var(--tile); }
+.menu-item { flex: 1; height: 44px; border-radius: 22px; background: var(--surface); box-shadow: var(--lift); display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; transition: background 0.15s, transform 0.12s; }
+.menu-item:hover { background: var(--surface-hover); }
 .menu-item:active { transform: scale(0.96); }
 .menu-item svg.icon { width: 18px; height: 18px; color: var(--text-2); }
 
 /* --- COMMAND BAR --- */
 #command-ui { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 8px; box-sizing: border-box; gap: 6px; cursor: default; }
 .cmd-row { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 8px; }
-.cmd-lumi { width: 22px; height: 18px; flex: none; background: var(--lumi); border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%; position: relative; }
+/* Lumi in a panel header: larger than the command bar's, and reading along while an agent works */
+.head-lumi { width: 30px; height: 25px; flex: none; position: relative; background: var(--lumi); border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%;
+    box-shadow: inset 2px 2.5px 4px rgba(255, 255, 255, 0.45), inset -2px -3px 5px rgba(0, 0, 0, 0.14); }
+.head-lumi::before, .head-lumi::after { content: ''; position: absolute; top: 8px; width: 4px; height: 7px; border-radius: 2px; background: var(--eye); }
+.head-lumi::before { left: 8px; } .head-lumi::after { right: 8px; }
+@keyframes head-read { 0%, 100% { transform: translate(-1.5px, 1px); } 50% { transform: translate(1.5px, 1px); } }
+.head-lumi.reading::before, .head-lumi.reading::after { animation: head-read 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .head-lumi.reading::before, .head-lumi.reading::after { animation: none; transform: translateY(1px); } }
+.cmd-lumi { width: 22px; height: 18px; flex: none; box-shadow: inset 1.5px 2px 3px rgba(255, 255, 255, 0.45), inset -1.5px -2.5px 4px rgba(0, 0, 0, 0.14); background: var(--lumi); border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%; position: relative; }
 .cmd-lumi::before, .cmd-lumi::after { content: ''; position: absolute; top: 6px; width: 3px; height: 5px; border-radius: 2px; background: var(--eye); }
 .cmd-lumi::before { left: 6px; } .cmd-lumi::after { right: 6px; }
 #cmd-input { flex: 1; background: transparent; border: 0; color: var(--text); font: 15px var(--font); user-select: text; caret-color: var(--blue); }
@@ -254,12 +393,12 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .cmd-row:focus-within { box-shadow: inset 0 -1.5px 0 rgba(76, 141, 255, 0.55); }
 .cmd-pins { display: flex; gap: 6px; padding: 0 4px; }
 .cmd-pin { flex: 1; height: 64px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: var(--text-2); transition: background 0.12s; min-width: 0; }
-.cmd-pin:hover, .cmd-pin.selected { background: var(--tile); color: var(--text); }
+.cmd-pin:hover, .cmd-pin.selected { background: var(--surface); box-shadow: var(--lift); color: var(--text); }
 .cmd-pin img, .cmd-result img { width: 26px; height: 26px; }
 .cmd-pin span { max-width: 100%; padding: 0 6px; box-sizing: border-box; }
 #cmd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .cmd-result { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 10px; border-radius: 10px; font-size: 13px; cursor: pointer; }
-.cmd-result.selected { background: var(--tile); }
+.cmd-result.selected { background: var(--surface); box-shadow: var(--lift); }
 .cmd-result img { width: 20px; height: 20px; }
 .cmd-result svg.icon { width: 18px; height: 18px; color: var(--text-2); }
 .cmd-result .name { flex: 1; }
@@ -280,12 +419,7 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .lumi-hidden #lumi-container { display: none; }
 #lumi-body {
     width: 100%; height: 100%;
-    background: var(--lumi);
-    border-radius: 55% 45% 42% 58% / 58% 48% 52% 42%;
-    position: relative;
-    box-shadow: inset -2px -5px 10px rgba(0,0,0,0.1);
     animation: breathe 5s ease-in-out infinite;
-    transition: background 0.3s;
     transform-origin: 50% 100%;
 }
 /* Full intensity: Lumi floats gently as it breathes (moods with their own motion override this) */
@@ -298,10 +432,14 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 #lumi-eyes { transition: transform 0.1s; }
 .eye-g { transform-box: fill-box; transform-origin: center; transition: transform 0.12s var(--spring); }
 .eye-open { fill: var(--eye); transition: opacity 0.12s; }
-.eye-glint { fill: #FFFFFF; opacity: 0.85; transition: opacity 0.12s; }
+.eye-glint { fill: #FFFFFF; opacity: 0.9; transition: opacity 0.12s; }
+::selection { background: rgba(76, 141, 255, 0.45); color: #FFFFFF; }
 .eye-happy, .eye-closed { fill: none; stroke: var(--eye); stroke-width: 2.4; stroke-linecap: round; opacity: 0; transition: opacity 0.12s; }
 #lumi-mouth { fill: var(--eye); opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0.4, 0.2); transition: opacity 0.15s, transform 0.15s; }
-#lumi-cheeks ellipse { fill: #FF8FA3; opacity: 0; transition: opacity 0.3s; }
+/* A faint blush all the time (moods deepen it); not on the machine-like skins */
+#lumi-cheeks ellipse { fill: #FF8FA3; opacity: 0.3; transition: opacity 0.3s; }
+[data-skin="robot"] #lumi-cheeks ellipse, [data-skin="pixel"] #lumi-cheeks ellipse, [data-skin="hologram"] #lumi-cheeks ellipse,
+[data-skin="star"] #lumi-cheeks ellipse { opacity: 0; }  /* the star's cheeks would sit on its edge */
 .blink .eye-g { transform: scaleY(0.1); }
 
 /* Sleepy "z"s, and sparkles for milestones */
@@ -313,23 +451,26 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 #lumi-sparkles i { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: var(--amber); opacity: 0; }
 #lumi-sparkles i:nth-child(even) { background: var(--violet); width: 4px; height: 4px; margin: -2px; }
 
-/* MIC BUTTON: overlaps Lumi's body so the mouse can reach it without crossing a click-through gap */
+/* MIC BUTTON: at Lumi's lower right, clear of its face. It overlaps the body's edge so the mouse can reach it without
+   crossing a click-through gap */
 #mic-btn {
-    position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
-    width: 30px; height: 30px; border-radius: 50%;
+    position: absolute; bottom: -9px; right: -15px; transform: scale(0.7); transform-origin: 30% 30%;
+    width: 28px; height: 28px; border-radius: 50%;
     background: #2A2A30; color: var(--text);
     display: flex; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 0.2s, bottom 0.2s, background 0.2s;
+    opacity: 0; transition: opacity 0.2s, transform 0.25s var(--spring), background 0.2s;
     border: 1px solid rgba(255,255,255,0.18);
 }
-#mic-btn svg.icon { width: 16px; height: 16px; }
-#lumi-container:hover #mic-btn, #mic-btn:focus-visible, .show-mic #mic-btn { opacity: 1; bottom: -20px; }
+#mic-btn svg.icon { width: 15px; height: 15px; }
+#lumi-container:hover #mic-btn, #mic-btn:focus-visible, .show-mic #mic-btn { opacity: 1; transform: scale(1); }
+/* While Lumi listens, thinks or speaks, the mic stays out of the way (the pill has Stop) */
+.mood-listening #mic-btn, .mood-speaking #mic-btn, .mood-thinking #mic-btn { opacity: 0 !important; pointer-events: none; }
 #mic-btn:hover { background: var(--blue); }
 
 /* SPEECH BUBBLE */
 #speech-bubble {
     position: absolute; top: 120px; left: 50%; transform: translateX(-50%) scale(0.9);
-    background: var(--tile); border: 1px solid var(--hairline);
+    background: var(--surface); border: 1px solid var(--hairline);
     color: var(--text); padding: 10px 14px; border-radius: 16px;
     font-size: 13px; line-height: 1.4; text-align: center;
     pointer-events: none; opacity: 0; width: max-content; max-width: 300px;
@@ -339,12 +480,14 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 }
 #speech-bubble.visible { transform: translateX(-50%) scale(1); opacity: 1; }
 #speech-bubble.error::before { content: '⚠ '; color: var(--red); }
+/* What Lumi heard you say, while it works out the answer */
+#speech-bubble.heard { color: var(--text-2); font-style: italic; }
 
 /* CARD (tour steps and questions like "Take a break?") */
 #card {
     position: absolute; top: 120px; left: 50%; transform: translateX(-50%);
     width: 300px; box-sizing: border-box;
-    background: var(--tile); border: 1px solid var(--hairline); border-radius: 16px;
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 16px;
     padding: 14px 16px 12px; display: none; flex-direction: column; gap: 10px;
     font-size: 13px; line-height: 1.45; z-index: 86;
 }
@@ -354,12 +497,15 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .card-step { font-size: 11px; color: var(--text-2); flex: 1; }
 .btn-text { font-size: 12px; color: var(--text-2); padding: 6px 10px; border-radius: 8px; }
 .btn-text:hover { background: #222228; color: var(--text); }
-.btn-primary { font-size: 12px; font-weight: 600; color: #fff; background: var(--blue-strong); padding: 6px 14px; border-radius: 8px; }
+.btn-primary { font-size: 12px; font-weight: 600; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22); background: var(--blue-strong); padding: 6px 14px; border-radius: 8px; }
+/* A guide points at one control: a soft blue ring that pulses */
+@keyframes guide-ring { 0% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0.55); } 70% { box-shadow: 0 0 0 7px rgba(76, 141, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0); } }
+.guide-spot { outline: 2px solid var(--blue) !important; outline-offset: 2px; border-radius: 12px; animation: guide-ring 1.6s ease-out infinite; }
 .highlight-island #island { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(76, 141, 255, 0.35), inset 0 1px 1px rgba(255,255,255,0.12); }
 
 /* --- LUMI MOODS (one per state; see resolveMood) --- */
 @keyframes breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, 0.98); } }
-@keyframes pulse-listen { 0% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0.6); } 70% { box-shadow: 0 0 0 12px rgba(76, 141, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0); } }
+@keyframes pulse-listen { 0% { box-shadow: var(--shade), 0 0 0 0 rgba(76, 141, 255, 0.6); } 70% { box-shadow: var(--shade), 0 0 0 12px rgba(76, 141, 255, 0); } 100% { box-shadow: var(--shade), 0 0 0 0 rgba(76, 141, 255, 0); } }
 @keyframes bounce-speak { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1, 1.06); } }
 .msg.stopped { opacity: 0.75; }
 .msg.note { align-self: center; background: transparent; color: var(--text-2); font-size: 12px; padding: 0; }
@@ -370,7 +516,8 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 @keyframes sparkle { 0% { opacity: 0; transform: translate(0, 0) scale(0.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); } }
 
 /* Listening: blue, eyes a little wider, a ring pulsing outwards */
-.mood-listening #lumi-body { background: var(--blue); animation: pulse-listen 1.5s infinite; }
+.mood-listening { --body: var(--blue); }
+.mood-listening #lumi-body { animation: pulse-listen 1.5s infinite; }
 .mood-listening .eye-g { transform: scale(1.15); }
 /* Thinking: eyes glance up and to the side while Gemini answers */
 .mood-thinking #lumi-eyes { transform: translate(-2px, -3px) !important; }
@@ -383,13 +530,14 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .mood-waiting .eye-g { animation: slow-blink 3.5s ease-in-out infinite; }
 .mood-waiting #lumi-body { animation: sway 3.2s ease-in-out infinite; }
 /* Speaking: green, with a small mouth that moves */
-.mood-speaking #lumi-body { background: var(--green); animation: bounce-speak 0.4s ease-in-out infinite; }
+.mood-speaking { --body: var(--green); }
+.mood-speaking #lumi-body { animation: bounce-speak 0.4s ease-in-out infinite; }
 .mood-speaking #lumi-mouth { opacity: 1; animation: talk 0.28s ease-in-out infinite; }
 /* With real audio levels (levels.py) the ring follows your voice and the mouth follows Lumi's;
    without them (or with Animation off) the loops above play instead */
 @property --mic { syntax: '<number>'; inherits: true; initial-value: 0; }
 @property --voice { syntax: '<number>'; inherits: true; initial-value: 0; }
-.mood-listening[data-mic] #lumi-body { animation: none; box-shadow: 0 0 0 calc(1px + var(--mic) * 11px) rgba(76, 141, 255, calc(0.2 + var(--mic) * 0.4)); }
+.mood-listening[data-mic] #lumi-body { animation: none; box-shadow: var(--shade), 0 0 0 calc(1px + var(--mic) * 11px) rgba(76, 141, 255, calc(0.2 + var(--mic) * 0.4)); }
 .mood-speaking[data-voice] #lumi-body { animation: none; transform: scale(1, calc(1 + var(--voice) * 0.05)); }
 .mood-speaking[data-voice] #lumi-mouth { animation: none; transform: scale(calc(0.5 + var(--voice) * 0.5), calc(0.25 + var(--voice) * 0.8)); }
 /* Success: a hop with happy, closed eyes and rosy cheeks after Lumi does something for you */
@@ -402,13 +550,14 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 .mood-error .eye-g { transform: scaleY(0.45); }
 .mood-error #eye-r { transform: scaleY(0.45) translateY(-2px); }
 /* Music: violet, eyes closed in enjoyment, gently swaying */
-.mood-music #lumi-body { background: var(--violet); }
+.mood-music { --body: var(--violet); }
 .mood-music #lumi-face { animation: sway 2.4s ease-in-out infinite; }
 /* Focus and break: calm, half-closed eyes */
-.mood-focus #lumi-body { background: var(--amber); animation-duration: 8s; }
-.mood-focus { opacity: 0.75; }
+.mood-focus #lumi-body { animation-duration: 8s; }
+.mood-focus { --body: var(--amber); opacity: 0.75; }
 .mood-focus .eye-g { transform: scaleY(0.55); }
-.mood-break #lumi-body { background: var(--green); animation-duration: 6s; }
+.mood-break { --body: var(--green); }
+.mood-break #lumi-body { animation-duration: 6s; }
 /* Sleepy: after 10 minutes without you, eyes closed, slow breathing, floating z's */
 .mood-sleepy #lumi-body { animation-duration: 8s; }
 .mood-sleepy .eye-open, .mood-sleepy .eye-glint { opacity: 0; }
@@ -498,7 +647,25 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 #lumi-thought i { position: absolute; left: 2px; bottom: 2px; width: 4px; height: 4px; border-radius: 50%; background: var(--text-2); animation: think-dot 1.5s ease-out infinite; }
 #lumi-thought i:nth-child(2) { animation-delay: 0.5s; }
 #lumi-thought i:nth-child(3) { animation-delay: 1s; }
-.mood-thinking #lumi-thought, .mood-checking #lumi-thought { opacity: 1; }
+.mood-thinking #lumi-thought, .mood-checking #lumi-thought, .mood-coding #lumi-thought { opacity: 1; }
+/* Coding: Claude Code or Codex is working. Lumi puts on reading glasses, reads along, and looks up now and then to think */
+#lumi-glasses { opacity: 0; transform: translateY(-3px); transform-box: view-box; transition: opacity 0.25s, transform 0.3s var(--spring); pointer-events: none; }
+#lumi-glasses .lens { fill: rgba(207, 226, 255, 0.28); stroke: var(--eye); stroke-width: 1.7; }
+#lumi-glasses .bridge, #lumi-glasses .temple { fill: none; stroke: var(--eye); stroke-width: 1.7; stroke-linecap: round; }
+#lumi-glasses .shine { fill: none; stroke: #fff; stroke-width: 1.1; stroke-linecap: round; opacity: 0.7; }
+.mood-coding #lumi-glasses { opacity: 1; transform: none; }
+.mood-coding #lumi-eyes { animation: read-think 6s ease-in-out infinite; }
+.mood-coding .eye-g { transform: scale(0.82); }
+.mood-coding #lumi-body { animation: bob 2.4s ease-in-out infinite; }
+.mood-coding #lumi-thought { transition-delay: 0.2s; }
+/* Reading left to right along a line, twice, then a look up and to the side while it thinks */
+@keyframes read-think {
+    0%, 100% { transform: translate(-2px, 1.5px); }
+    14% { transform: translate(2px, 1.5px); } 16% { transform: translate(-2px, 2.5px); } 30% { transform: translate(2px, 2.5px); }
+    36%, 62% { transform: translate(1.5px, -2.5px); }
+    70% { transform: translate(-2px, 1.5px); }
+}
+.motion-reduced .mood-coding #lumi-eyes { animation: none; transform: translate(1.5px, -2px); }
 
 /* Milestone: one spin with a burst of sparkles */
 .celebrate #lumi-body { animation: spin-hop 0.9s var(--spring) 1; }
@@ -506,11 +673,73 @@ button.tile span { font-size: 11px; color: var(--text-2); }
 #lumi-sparkles i:nth-child(1) { --dx: -38px; --dy: -22px; } #lumi-sparkles i:nth-child(2) { --dx: 36px; --dy: -26px; }
 #lumi-sparkles i:nth-child(3) { --dx: -44px; --dy: 8px; }   #lumi-sparkles i:nth-child(4) { --dx: 46px; --dy: 4px; }
 #lumi-sparkles i:nth-child(5) { --dx: -22px; --dy: -38px; } #lumi-sparkles i:nth-child(6) { --dx: 20px; --dy: -40px; }
+/* --- CHRISTMAS --- */
+/* Moments that only happen 18-26 December with seasonal dress-up on (and in Settings' try-outs). Everything here is solid
+   and leaves by shrinking, not fading: the window's transparency is a colour key, so half-see-through pixels would grey */
+@keyframes snow-fall { 0% { transform: translate(0, 0) scale(0); } 12% { transform: translate(1px, 6px) scale(1); }
+    50% { transform: translate(-3px, 40px) scale(1); } 88% { transform: translate(2px, 70px) scale(1); } 100% { transform: translate(0, 76px) scale(0); } }
+@keyframes gift-pop { 0% { transform: scale(0); } 14%, 84% { transform: scale(1); } 100% { transform: scale(0); } }
+@keyframes lid-off { 0%, 38% { transform: none; } 52%, 100% { transform: translate(3px, -9px) rotate(-28deg); } }
+@keyframes bell-ring { 0% { transform: scale(0); } 10% { transform: scale(1) rotate(0); } 22% { transform: rotate(26deg); } 36% { transform: rotate(-24deg); }
+    50% { transform: rotate(18deg); } 64% { transform: rotate(-12deg); } 78% { transform: rotate(0) scale(1); } 100% { transform: scale(0); } }
+@keyframes breath-puff { 0% { transform: translate(0, 0) scale(0); } 30% { transform: translate(5px, -1px) scale(1); } 100% { transform: translate(20px, -7px) scale(0); } }
+@keyframes shiver { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1.3px); } 75% { transform: translateX(1.3px); } }
+#lumi-snow { position: absolute; inset: -32px -36px -6px; pointer-events: none; }
+/* The pale blue edge keeps flakes visible against light skins (Snowman, Classic) and light wallpapers */
+#lumi-snow i { position: absolute; top: 0; width: 5px; height: 5px; box-sizing: border-box; border-radius: 50%; background: #FFFFFF; border: 1px solid #B9CDE6; transform: scale(0); }
+#lumi-snow i:nth-child(1) { left: 6%; } #lumi-snow i:nth-child(2) { left: 22%; width: 4px; height: 4px; } #lumi-snow i:nth-child(3) { left: 37%; }
+#lumi-snow i:nth-child(4) { left: 52%; width: 4px; height: 4px; } #lumi-snow i:nth-child(5) { left: 66%; } #lumi-snow i:nth-child(6) { left: 80%; width: 4px; height: 4px; }
+#lumi-snow i:nth-child(7) { left: 93%; }
+#lumi-gift { position: absolute; left: -27px; bottom: -2px; width: 22px; height: 22px; overflow: visible; pointer-events: none; transform: scale(0); transform-origin: 50% 100%; }
+#lumi-gift .gift-lid { transform-box: fill-box; transform-origin: 0 100%; }
+#lumi-bell { position: absolute; right: -15px; top: -13px; width: 13px; height: 15px; pointer-events: none; transform: scale(0); transform-origin: 50% 0; }
+#lumi-breath { position: absolute; left: 38px; top: 29px; width: 1px; height: 1px; pointer-events: none; }
+#lumi-breath i { position: absolute; left: 0; top: 0; border-radius: 50%; background: #FFFFFF; transform: scale(0); }
+#lumi-breath i:nth-child(1) { width: 5px; height: 5px; } #lumi-breath i:nth-child(2) { width: 7px; height: 7px; } #lumi-breath i:nth-child(3) { width: 9px; height: 9px; }
+/* Snowfall: now and then over Christmas; Lumi looks up and sways as the snow drifts past */
+.mood-snowfall #lumi-snow i, .mood-merry #lumi-snow i { animation: snow-fall var(--snow-time, 2.6s) linear 1; }
+#lumi-snow i:nth-child(2) { animation-delay: 0.5s !important; } #lumi-snow i:nth-child(3) { animation-delay: 0.15s !important; }
+#lumi-snow i:nth-child(4) { animation-delay: 0.75s !important; } #lumi-snow i:nth-child(5) { animation-delay: 0.3s !important; }
+#lumi-snow i:nth-child(6) { animation-delay: 0.6s !important; } #lumi-snow i:nth-child(7) { animation-delay: 0.05s !important; }
+.mood-snowfall #lumi-eyes { transform: translate(0, -3px) !important; }
+.mood-snowfall .eye-g { transform: scale(1.1); }
+.mood-snowfall #lumi-face { animation: sway 1.6s ease-in-out 2; }
+/* Present: a focus session finished over Christmas; a gift pops up, the lid flies off, and out come sparkles */
+.mood-present #lumi-gift { animation: gift-pop 1.8s var(--spring) 1; }
+.mood-present #lumi-gift .gift-lid { animation: lid-off 1.8s ease-out 1; }
+.mood-present #lumi-eyes { transform: translate(-3px, 1px) !important; }
+.mood-present .eye-g { transform: scale(1.15); }
+.mood-present #lumi-cheeks ellipse { opacity: 0.6; }
+.mood-present #lumi-body { animation: hop 0.6s ease-out 0.75s 1; }
+.mood-present #lumi-sparkles i { animation: sparkle 0.9s ease-out 0.75s 1; }
+/* Jingle: petting or double-clicking Lumi over Christmas; a bell swings while Lumi wiggles */
+.mood-jingle #lumi-bell { animation: bell-ring 1.4s ease-in-out 1; }
+.mood-jingle .eye-open, .mood-jingle .eye-glint { opacity: 0; }
+.mood-jingle .eye-happy { opacity: 1; }
+.mood-jingle #lumi-cheeks ellipse { opacity: 0.6; }
+.mood-jingle #lumi-body { animation: giggle 0.55s ease-in-out 2; }
+/* Brrr: back at the PC over Christmas; a shiver and a puff of frosty breath, then the usual welcome */
+.mood-brrr #lumi-body { animation: shiver 0.09s linear 12; }
+.mood-brrr .eye-g { transform: scaleY(0.45); }
+.mood-brrr #lumi-mouth { opacity: 1; transform: scale(0.5, 0.35); }
+.mood-brrr #lumi-breath i { animation: breath-puff 0.9s ease-out 1; }
+#lumi-breath i:nth-child(2) { animation-delay: 0.2s !important; } #lumi-breath i:nth-child(3) { animation-delay: 0.4s !important; }
+/* Merry Christmas: the first hello on 25 December; two hops, red and green sparkles, and a flurry of snow */
+.mood-merry { --snow-time: 1.6s; }
+.mood-merry .eye-open, .mood-merry .eye-glint { opacity: 0; }
+.mood-merry .eye-happy { opacity: 1; }
+.mood-merry #lumi-cheeks ellipse { opacity: 0.7; }
+.mood-merry #lumi-body { animation: hop 0.6s ease-out 2; }
+.mood-merry #lumi-sparkles i { animation: sparkle 0.9s ease-out 1; background: #E0453A; }
+.mood-merry #lumi-sparkles i:nth-child(even) { background: #3FAE5A; }
+
 /* A press on Lumi: a quick squash and spring back */
 @keyframes boop { 0% { transform: scale(1, 1); } 35% { transform: scale(1.08, 0.88); } 100% { transform: scale(1, 1); } }
 #lumi-body.boop { animation: boop 0.26s var(--spring) 1 !important; }
 /* After two minutes without the mouse nearby, Lumi holds still */
-.resting #lumi-body, .resting .eq i { animation-play-state: paused; }
+.resting #lumi-body, .resting .eq i, .resting #lumi-eyes, .resting #lumi-thought i, .resting .agent-dots i { animation-play-state: paused; }
+/* Out of sight (a full-screen app, or Hide 1 hour): nothing animates */
+.window-hidden *, .window-hidden *::before, .window-hidden *::after { animation-play-state: paused !important; }
 
 /* --- REDUCED MOTION --- */
 /* "Follow Windows" uses the system setting (also Windows' "Animation effects"); Settings can force either way */
