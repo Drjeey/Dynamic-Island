@@ -14,3 +14,13 @@ notes.txt
 video/.hyperframes/
 video/.thumbnails/
 video/.waveform-cache/
+
+
+# Build output
+build/
+dist/
+installer/Output/
+
+# Promo video source and renders, and design-review notes: local only, not part of the app
+video/
+.impeccable/
