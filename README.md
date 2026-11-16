@@ -1,12 +1,14 @@
 <p align="center"><img src="design/brand/hero.png" alt="Meet Lumi: a tiny AI pet that lives in your Dynamic Island" width="100%"></p>
 
+<p align="center"><a href="https://github.com/Drjeey/Lumi-Island/releases/latest"><b>&#11015; Download the latest installer for Windows</b></a><br><sub>Open the link, then click the <code>.exe</code> file under Assets. Windows 10 or later.</sub></p>
+
 # Lumi Island
 
 A Windows desktop "Dynamic Island" overlay with Lumi, a small AI pet you can talk to.
 
 ## Install
 
-Download `LumiIsland-Setup-<version>.exe` from the [Releases](https://github.com/Drjeey/Lumi-Island/releases) page and run it (Windows 10 or later, no admin rights needed). Windows may show a SmartScreen warning because the installer is not code-signed: choose **More info → Run anyway**. Your settings are kept in `%APPDATA%\Lumi Island`.
+Download `LumiIsland-Setup-<version>.exe` from the [latest release](https://github.com/Drjeey/Lumi-Island/releases/latest) (under **Assets**, not "Source code") and run it (Windows 10 or later, no admin rights needed). Windows may show a SmartScreen warning because the installer is not code-signed: choose **More info → Run anyway**. Your settings are kept in `%APPDATA%\Lumi Island`.
 
 ## Run from source
 
